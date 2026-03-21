@@ -1,0 +1,25 @@
+{
+  "name": "Vocal Practice - ฝึกร้องเพลง",
+  "short_name": "Vocal Practice",
+  "description": "แอปฝึกร้องเพลงด้วย AI - วัดช่วงเสียง ฝึกสเกล และพัฒนาทักษะการร้อง",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6c5ce7",
+  "orientation": "portrait",
+  "categories": ["music", "education", "entertainment"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
