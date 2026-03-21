@@ -42,28 +42,28 @@ function generatePattern(rootMidi: number, pattern: [number, number][], reps: nu
 }
 
 // Generators
-const threeNoteRun = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,0.5],[-2,0.5],[-4,0.5],[-2,0.5],[0,1]], 5, 1, syl, 1.5);
-const swiftBuildUp = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,0.5],[2,0.5],[4,0.5],[5,0.5],[7,1.5],[4,0.5],[2,0.5],[0,1.5]], 4, 1, syl, 1.5);
-const ascendingRun = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,0.5],[2,0.5],[4,0.5],[5,0.5],[7,0.5],[9,0.5],[11,0.5],[12,2]], 4, 1, syl, 2);
-const descendingRun = (r: number, bpm: number, syl: string) => generatePattern(r, [[12,0.5],[11,0.5],[9,0.5],[7,0.5],[5,0.5],[4,0.5],[2,0.5],[0,2]], 4, 1, syl, 2);
-const octaveRun = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,0.25],[2,0.25],[4,0.25],[5,0.25],[7,0.25],[9,0.25],[11,0.25],[12,0.5],[11,0.25],[9,0.25],[7,0.25],[5,0.25],[4,0.25],[2,0.25],[0,1.5]], 3, 1, syl, 1.5);
+const threeNoteRun = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,0.5],[-2,0.5],[-4,0.5],[-2,0.5],[0,1]], 5, 1, syl, 1.5);
+const swiftBuildUp = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,0.5],[2,0.5],[4,0.5],[5,0.5],[7,1.5],[4,0.5],[2,0.5],[0,1.5]], 4, 1, syl, 1.5);
+const ascendingRun = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,0.5],[2,0.5],[4,0.5],[5,0.5],[7,0.5],[9,0.5],[11,0.5],[12,2]], 4, 1, syl, 2);
+const descendingRun = (r: number, _bpm: number, syl: string) => generatePattern(r, [[12,0.5],[11,0.5],[9,0.5],[7,0.5],[5,0.5],[4,0.5],[2,0.5],[0,2]], 4, 1, syl, 2);
+const octaveRun = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,0.25],[2,0.25],[4,0.25],[5,0.25],[7,0.25],[9,0.25],[11,0.25],[12,0.5],[11,0.25],[9,0.25],[7,0.25],[5,0.25],[4,0.25],[2,0.25],[0,1.5]], 3, 1, syl, 1.5);
 
-const majScaleAsc = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,1],[2,1],[4,1],[5,1],[7,1],[9,1],[11,1],[12,2]], 4, 1, syl, 2);
-const minScaleAsc = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,1],[2,1],[3,1],[5,1],[7,1],[8,1],[10,1],[12,2]], 4, 1, syl, 2);
-const majScaleDesc = (r: number, bpm: number, syl: string) => generatePattern(r, [[12,1],[11,1],[9,1],[7,1],[5,1],[4,1],[2,1],[0,2]], 4, 1, syl, 2);
-const pentatonicAsc = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,1.5],[2,1],[4,1],[7,1.5],[9,1],[12,3]], 4, 1, syl, 2);
-const pentatonicDesc = (r: number, bpm: number, syl: string) => generatePattern(r, [[12,1.5],[9,1],[7,1.5],[4,1],[2,1],[0,3]], 4, 1, syl, 2);
-const majScaleInt = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,0.75],[2,0.25],[0,0.75],[4,0.25],[0,0.75],[5,0.25],[0,0.75],[7,1.5]], 4, 1, syl, 1.5);
-const majorTriadArp = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,1],[4,1],[7,1.5],[4,0.5],[0,2]], 5, 1, syl, 1);
-const minorTriadArp = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,1],[3,1],[7,1.5],[3,0.5],[0,2]], 5, 1, syl, 1);
-const major7Arp = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,0.75],[4,0.75],[7,0.75],[11,0.75],[12,1.5],[11,0.75],[7,0.75],[4,0.75],[0,2]], 5, 1, syl, 2);
-const minor7Arp = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,0.75],[3,0.75],[7,0.75],[10,0.75],[12,1.5],[10,0.75],[7,0.75],[3,0.75],[0,2]], 5, 1, syl, 2);
-const humScale = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,1],[2,1],[4,1],[5,1],[7,1],[5,1],[4,1],[2,1],[0,2]], 4, 1, syl, 1.5);
-const lipTrillSlow = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,1],[2,1],[4,1],[5,1],[7,1],[5,1],[4,1],[2,1],[0,1.5]], 4, 1, syl, 1.5);
-const sirenSlide = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,3],[5,2],[9,2],[12,3]], 3, 1, syl, 2);
-const vocalFry = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,4]], 3, 1, syl, 2);
-const staccatoRep = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25]], 5, 1, syl, 1);
-const vowelShift = (r: number, bpm: number, _syl: string) => {
+const majScaleAsc = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,1],[2,1],[4,1],[5,1],[7,1],[9,1],[11,1],[12,2]], 4, 1, syl, 2);
+const minScaleAsc = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,1],[2,1],[3,1],[5,1],[7,1],[8,1],[10,1],[12,2]], 4, 1, syl, 2);
+const majScaleDesc = (r: number, _bpm: number, syl: string) => generatePattern(r, [[12,1],[11,1],[9,1],[7,1],[5,1],[4,1],[2,1],[0,2]], 4, 1, syl, 2);
+const pentatonicAsc = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,1.5],[2,1],[4,1],[7,1.5],[9,1],[12,3]], 4, 1, syl, 2);
+const pentatonicDesc = (r: number, _bpm: number, syl: string) => generatePattern(r, [[12,1.5],[9,1],[7,1.5],[4,1],[2,1],[0,3]], 4, 1, syl, 2);
+const majScaleInt = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,0.75],[2,0.25],[0,0.75],[4,0.25],[0,0.75],[5,0.25],[0,0.75],[7,1.5]], 4, 1, syl, 1.5);
+const majorTriadArp = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,1],[4,1],[7,1.5],[4,0.5],[0,2]], 5, 1, syl, 1);
+const minorTriadArp = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,1],[3,1],[7,1.5],[3,0.5],[0,2]], 5, 1, syl, 1);
+const major7Arp = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,0.75],[4,0.75],[7,0.75],[11,0.75],[12,1.5],[11,0.75],[7,0.75],[4,0.75],[0,2]], 5, 1, syl, 2);
+const minor7Arp = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,0.75],[3,0.75],[7,0.75],[10,0.75],[12,1.5],[10,0.75],[7,0.75],[3,0.75],[0,2]], 5, 1, syl, 2);
+const humScale = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,1],[2,1],[4,1],[5,1],[7,1],[5,1],[4,1],[2,1],[0,2]], 4, 1, syl, 1.5);
+const lipTrillSlow = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,1],[2,1],[4,1],[5,1],[7,1],[5,1],[4,1],[2,1],[0,1.5]], 4, 1, syl, 1.5);
+const sirenSlide = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,3],[5,2],[9,2],[12,3]], 3, 1, syl, 2);
+const vocalFry = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,4]], 3, 1, syl, 2);
+const staccatoRep = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25]], 5, 1, syl, 1);
+const vowelShift = (r: number, _bpm: number, _syl: string) => {
   const notes: ExerciseNote[] = [];
   let beat = 0;
   ['Mee', 'Meh', 'Mah', 'Moh', 'Moo'].forEach((s) => {
@@ -72,8 +72,8 @@ const vowelShift = (r: number, bpm: number, _syl: string) => {
   });
   return notes;
 };
-const sustainedHold = (r: number, bpm: number, syl: string, dur: number) => generatePattern(r, [[0,dur]], 3, 1, syl, 4);
-const diaphragmBounce = (r: number, bpm: number, syl: string) => generatePattern(r, [[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25]], 4, 1, syl, 1);
+const sustainedHold = (r: number, _bpm: number, syl: string, dur: number) => generatePattern(r, [[0,dur]], 3, 1, syl, 4);
+const diaphragmBounce = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25]], 4, 1, syl, 1);
 
 const randomSyllable = (syllables: string[]) => syllables[Math.floor(Math.random() * syllables.length)];
 
