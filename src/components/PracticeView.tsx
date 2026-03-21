@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { AudioEngine } from '../lib/audioEngine';
 import { frequencyToMidi, midiToNoteName, midiToFrequency } from '../lib/noteUtils';
 import type { Exercise } from '../lib/exercises';
+import { updateStatsAfterPractice } from '../lib/statsManager';
 
 interface Props { exercise: Exercise; onBack: () => void; }
 
@@ -158,7 +159,18 @@ export default function PracticeView({ exercise, onBack }: Props) {
       // Note ended, finalize scoring
       if (totalBeats > 0 && beatsElapsed > totalBeats + 1 && running && !paused && !finished) {
         setRunning(false);
-        setFinalScore({ ...scoreRef.current });
+        const finalScoreData = { ...scoreRef.current };
+        setFinalScore(finalScoreData);
+        
+        // บันทึกสถิติ
+        updateStatsAfterPractice(
+          exercise.id,
+          finalScoreData.perfect,
+          finalScoreData.good,
+          finalScoreData.maxCombo,
+          finalScoreData.total
+        );
+        
         // Stop pitch detection immediately
         if (engineRef.current) {
           engineRef.current.onPitchDetected = null;

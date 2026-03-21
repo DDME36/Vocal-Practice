@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { VocalRange } from '../App';
 import SettingsView from './SettingsView';
 import { IconSettings, IconMic, IconCheckCircle, IconFlame, IconMusic } from './Icons';
+import { loadStats, getLast7DaysActivity } from '../lib/statsManager';
 
 interface Props { 
   vocalRange: VocalRange | null;
@@ -11,8 +12,16 @@ interface Props {
 
 export default function ProfileView({ vocalRange, skillLevel, onChangeSkillLevel }: Props) {
   const [showSettings, setShowSettings] = useState(false);
+  const [stats, setStats] = useState(() => loadStats());
+  const [activityDays, setActivityDays] = useState<boolean[]>([]);
   const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   const today = new Date().getDay();
+
+  // โหลดสถิติและ activity เมื่อเปิดหน้า
+  useEffect(() => {
+    setStats(loadStats());
+    setActivityDays(getLast7DaysActivity());
+  }, []);
 
   if (showSettings) {
     return <SettingsView 
@@ -115,19 +124,19 @@ export default function ProfileView({ vocalRange, skillLevel, onChangeSkillLevel
       <h2 className="sec-title" style={{marginTop: 32}}>Vocal Stats</h2>
       <div className="stats-grid">
         <div className="stat-box">
-          <div className="st-val" style={{color: '#6366f1'}}>13</div>
+          <div className="st-val" style={{color: '#6366f1'}}>{stats.totalExercises}</div>
           <div className="st-lbl">Exercises</div>
         </div>
         <div className="stat-box">
-          <div className="st-val" style={{color: '#00b894'}}>340</div>
+          <div className="st-val" style={{color: '#00b894'}}>{stats.perfectHits}</div>
           <div className="st-lbl">Perfect Hits</div>
         </div>
         <div className="stat-box">
-          <div className="st-val" style={{color: '#e84118'}}>42</div>
+          <div className="st-val" style={{color: '#e84118'}}>{stats.maxCombo}</div>
           <div className="st-lbl">Max Combo</div>
         </div>
         <div className="stat-box">
-          <div className="st-val" style={{color: '#fbc531'}}>12</div>
+          <div className="st-val" style={{color: '#fbc531'}}>{stats.currentStreak}</div>
           <div className="st-lbl">Days Streak</div>
         </div>
       </div>
@@ -135,12 +144,16 @@ export default function ProfileView({ vocalRange, skillLevel, onChangeSkillLevel
       {/* Daily Calendar (Sleeker Timeline) */}
       <h2 className="sec-title" style={{marginTop: 32}}>Activity Timeline</h2>
       <div className="cal-strip">
-        {days.map((d, i) => (
-          <div key={i} className={`cal-day ${i === today ? 'cal-today' : ''} ${i < today ? 'cal-done' : ''}`}>
-             <div className="cd-l">{d}</div>
-             <div className="cd-dot"></div>
-          </div>
-        ))}
+        {days.map((d, i) => {
+          const dayIndex = (i - today + 6) % 7;
+          const isPracticed = activityDays[dayIndex] || false;
+          return (
+            <div key={i} className={`cal-day ${i === today ? 'cal-today' : ''} ${isPracticed ? 'cal-done' : ''}`}>
+               <div className="cd-l">{d}</div>
+               <div className="cd-dot"></div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Records Badge (Replacing Hexagons) */}
