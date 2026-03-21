@@ -1,7 +1,7 @@
 
 export const IconHeart = ({ size = 24, className = "", style }: { size?: number, className?: string, style?: React.CSSProperties }) => (
-  <svg xmlns="http://www.w3.org/-www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
-    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
   </svg>
 );
 
@@ -12,14 +12,16 @@ export const IconDumbbell = ({ size = 24, className = "", style }: { size?: numb
 );
 
 export const IconBookOpen = ({ size = 24, className = "", style }: { size?: number, className?: string, style?: React.CSSProperties }) => (
-  <svg xmlns="http://www.w3.org/-www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
-    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M12 7v14"/>
+    <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>
   </svg>
 );
 
 export const IconUser = ({ size = 24, className = "", style }: { size?: number, className?: string, style?: React.CSSProperties }) => (
-  <svg xmlns="http://www.w3.org/-www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
-    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <circle cx="12" cy="8" r="5"/>
+    <path d="M20 21a8 8 0 1 0-16 0"/>
   </svg>
 );
 
@@ -54,8 +56,16 @@ export const IconFlame = ({ size = 24, className = "", style }: { size?: number,
 );
 
 export const IconMusic = ({ size = 24, className = "", style }: { size?: number, className?: string, style?: React.CSSProperties }) => (
-  <svg xmlns="http://www.w3.org/-www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
-    <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <rect x="2" y="8" width="20" height="12" rx="2"/>
+    <path d="M6 8V6"/>
+    <path d="M10 8V4"/>
+    <path d="M14 8V6"/>
+    <path d="M18 8V4"/>
+    <path d="M6 20v-2"/>
+    <path d="M10 20v-2"/>
+    <path d="M14 20v-2"/>
+    <path d="M18 20v-2"/>
   </svg>
 );
 
