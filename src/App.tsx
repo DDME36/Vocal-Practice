@@ -20,17 +20,35 @@ export interface VocalRange {
   voiceType: string;
 }
 
+// สุ่มคีย์ให้เหมาะกับ range และไม่ซ้ำเดิม
 function adaptExercise(ex: Exercise, range: VocalRange): Exercise {
   const exLow = Math.min(...ex.notes.map(n => n.midi));
   const exHigh = Math.max(...ex.notes.map(n => n.midi));
   const exSpan = exHigh - exLow;
-  const targetLow = range.lowMidi + 3;
-  const maxLow = range.highMidi - exSpan - 2;
-  const newRoot = Math.max(targetLow, Math.min(targetLow, maxLow));
+  
+  // คำนวณช่วงคีย์ที่เหมาะสม
+  const minRoot = range.lowMidi + 3;
+  const maxRoot = range.highMidi - exSpan - 2;
+  
+  // สุ่มคีย์ในช่วงที่เหมาะสม (แทนที่จะใช้คีย์เดิมเสมอ)
+  const availableRange = Math.max(1, maxRoot - minRoot);
+  const randomOffset = Math.floor(Math.random() * Math.min(availableRange, 7)); // สุ่มไม่เกิน 7 semitones
+  const newRoot = Math.max(minRoot, Math.min(minRoot + randomOffset, maxRoot));
+  
   const shift = newRoot - exLow;
-  if (shift === 0) return ex;
+  
+  // สุ่ม BPM เล็กน้อย (±5%)
+  const bpmVariation = Math.floor(Math.random() * (ex.bpm * 0.1)) - (ex.bpm * 0.05);
+  const newBpm = Math.round(ex.bpm + bpmVariation);
+  
   const newNotes: ExerciseNote[] = ex.notes.map(n => ({ ...n, midi: n.midi + shift }));
-  return { ...ex, startingNote: ex.startingNote + shift, notes: newNotes };
+  
+  return { 
+    ...ex, 
+    startingNote: ex.startingNote + shift, 
+    notes: newNotes,
+    bpm: newBpm
+  };
 }
 
 export default function App() {
