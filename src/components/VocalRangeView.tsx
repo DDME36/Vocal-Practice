@@ -27,28 +27,33 @@ export default function VocalRangeView({ onBack, onSave }: Props) {
   const currentVolRef = useRef(0);
 
   const startListening = async () => {
-    const engine = new AudioEngine();
-    engine.noiseGate = noiseGate;
-    engineRef.current = engine;
-    engine.onPitchDetected = (freq, vol) => {
-      currentVolRef.current = vol;
-      volumeHistoryRef.current.push(vol);
-      if (volumeHistoryRef.current.length > 60) volumeHistoryRef.current.shift();
-      
-      if (!freq || vol < 0.01) return;
-      const note = frequencyToNote(freq);
-      
-      // Bailout state updates if unchanged to save CPU
-      setCurNote(prev => prev !== note.fullName ? note.fullName : prev);
-      setCurFreq(prev => prev !== Math.round(freq) ? Math.round(freq) : prev);
-      setCentsOff(note.centsOff);
-      
-      setLowMidi(prev => (prev === null ? note.midiNumber : Math.min(prev, note.midiNumber)));
-      setHighMidi(prev => (prev === null ? note.midiNumber : Math.max(prev, note.midiNumber)));
-    };
-    await engine.start();
-    setIsListening(true);
-    setSaved(false);
+    try {
+      const engine = new AudioEngine();
+      engine.noiseGate = noiseGate;
+      engineRef.current = engine;
+      engine.onPitchDetected = (freq, vol) => {
+        currentVolRef.current = vol;
+        volumeHistoryRef.current.push(vol);
+        if (volumeHistoryRef.current.length > 60) volumeHistoryRef.current.shift();
+        
+        if (!freq || vol < 0.01) return;
+        const note = frequencyToNote(freq);
+        
+        // Bailout state updates if unchanged to save CPU
+        setCurNote(prev => prev !== note.fullName ? note.fullName : prev);
+        setCurFreq(prev => prev !== Math.round(freq) ? Math.round(freq) : prev);
+        setCentsOff(note.centsOff);
+        
+        setLowMidi(prev => (prev === null ? note.midiNumber : Math.min(prev, note.midiNumber)));
+        setHighMidi(prev => (prev === null ? note.midiNumber : Math.max(prev, note.midiNumber)));
+      };
+      await engine.start();
+      setIsListening(true);
+      setSaved(false);
+    } catch (error) {
+      console.error('Microphone error:', error);
+      alert('ไม่สามารถเข้าถึงไมโครโฟนได้\nกรุณาตรวจสอบ:\n1. อนุญาตให้เข้าถึงไมโครโฟนใน Settings\n2. ปิดแอปอื่นที่ใช้ไมโครโฟนอยู่\n3. ลองรีเฟรชหน้าเว็บ');
+    }
   };
 
   const stopListening = () => {

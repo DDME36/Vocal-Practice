@@ -107,10 +107,9 @@ export default function ExerciseDetail({ exercise, onClose, onStart }: Props) {
     setIsPlaying(true);
 
     try {
+      // สร้าง AudioContext แบบไม่ต้องขอไมค์ (สำหรับ preview เท่านั้น)
       const engine = new AudioEngine();
-      engine.noiseGate = 1.0;
       engineRef.current = engine;
-      await engine.start();
       startRef.current = performance.now();
 
       const msPerBeat = 60000 / transposedExercise.bpm;

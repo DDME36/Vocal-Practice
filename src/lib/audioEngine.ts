@@ -2,6 +2,7 @@ import { detectPitch } from './pitchDetection';
 
 export class AudioEngine {
   private audioContext: AudioContext | null = null;
+  private playbackContext: AudioContext | null = null; // แยก context สำหรับเล่นเสียง
   private analyser: AnalyserNode | null = null;
   private mediaStream: MediaStream | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
@@ -17,12 +18,30 @@ export class AudioEngine {
 
   async start(): Promise<void> {
     this.stopped = false;
+    
+    // Request microphone permission first
     this.mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      audio: { 
+        echoCancellation: false, 
+        noiseSuppression: false, 
+        autoGainControl: false,
+        // iOS specific settings
+        sampleRate: 44100,
+        channelCount: 1
+      },
     });
-    this.audioContext = new AudioContext();
+    
+    // Create AudioContext (iOS requires user gesture)
+    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    // iOS: Resume AudioContext if suspended
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+    }
+    
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 2048;
+    this.analyser.smoothingTimeConstant = 0.3; // Reduce noise on iOS
     this.buffer = new Float32Array(this.analyser.fftSize);
     this.source = this.audioContext.createMediaStreamSource(this.mediaStream);
     this.source.connect(this.analyser);
@@ -84,42 +103,62 @@ export class AudioEngine {
   };
 
   /** Play reference tone - optimized for vocal training */
-  playTone(frequency: number, durationMs: number = 500, _syllable?: string) {
-    if (!this.audioContext || this.audioContext.state === 'closed') return;
-    const t = this.audioContext.currentTime;
+  async playTone(frequency: number, durationMs: number = 500, _syllable?: string) {
+    // ใช้ playbackContext แยกจาก audioContext (ไม่ต้องขอไมค์)
+    let context = this.playbackContext;
+    
+    if (!context) {
+      // สร้าง AudioContext ใหม่สำหรับเล่นเสียงเท่านั้น (ไม่ต้องขอไมค์)
+      context = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.playbackContext = context;
+    }
+    
+    // iOS: Resume AudioContext if suspended
+    if (context.state === 'suspended') {
+      try {
+        await context.resume();
+      } catch (e) {
+        console.warn('Failed to resume audio context:', e);
+        return;
+      }
+    }
+    
+    if (context.state === 'closed') return;
+    
+    const t = context.currentTime;
     const dur = durationMs / 1000;
 
     // Master gain with smooth envelope
-    const masterGain = this.audioContext.createGain();
+    const masterGain = context.createGain();
     masterGain.gain.setValueAtTime(0, t);
     masterGain.gain.linearRampToValueAtTime(0.25, t + 0.02); // Quick attack
     masterGain.gain.setValueAtTime(0.25, t + dur - 0.05); // Sustain
     masterGain.gain.linearRampToValueAtTime(0, t + dur); // Quick release
 
     // Warm filter for smooth sound
-    const filter = this.audioContext.createBiquadFilter();
+    const filter = context.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = frequency * 3 + 800;
     filter.Q.value = 1;
     
     // Main tone (sine wave for pure pitch reference)
-    const osc1 = this.audioContext.createOscillator();
+    const osc1 = context.createOscillator();
     osc1.type = 'sine';
     osc1.frequency.value = frequency;
-    const gain1 = this.audioContext.createGain();
+    const gain1 = context.createGain();
     gain1.gain.value = 1.0;
     osc1.connect(gain1).connect(filter);
     
     // Subtle octave for richness
-    const osc2 = this.audioContext.createOscillator();
+    const osc2 = context.createOscillator();
     osc2.type = 'sine';
     osc2.frequency.value = frequency * 2;
-    const gain2 = this.audioContext.createGain();
+    const gain2 = context.createGain();
     gain2.gain.value = 0.15;
     osc2.connect(gain2).connect(filter);
     
     filter.connect(masterGain);
-    masterGain.connect(this.audioContext.destination);
+    masterGain.connect(context.destination);
 
     osc1.start(t);
     osc2.start(t);
@@ -138,8 +177,9 @@ export class AudioEngine {
 
   /** Fade out all currently playing tones */
   fadeOutAllTones() {
-    if (!this.audioContext || this.audioContext.state === 'closed') return;
-    const t = this.audioContext.currentTime;
+    const context = this.playbackContext || this.audioContext;
+    if (!context || context.state === 'closed') return;
+    const t = context.currentTime;
     
     this.activeOscillators.forEach(({ osc, gain }) => {
       try {
@@ -164,9 +204,17 @@ export class AudioEngine {
     this.fadeOutAllTones();
     this.source?.disconnect();
     this.mediaStream?.getTracks().forEach(t => t.stop());
+    
+    // ปิด audioContext (สำหรับ recording)
     if (this.audioContext && this.audioContext.state !== 'closed') {
       this.audioContext.close().catch(() => {});
     }
+    
+    // ไม่ปิด playbackContext เพื่อให้ preview ใช้ต่อได้
+    // if (this.playbackContext && this.playbackContext.state !== 'closed') {
+    //   this.playbackContext.close().catch(() => {});
+    // }
+    
     this.audioContext = null;
     this.analyser = null;
     this.source = null;
