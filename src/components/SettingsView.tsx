@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sliders, RotateCcw } from 'lucide-react';
+import { Sliders, RotateCcw, Zap } from 'lucide-react';
 import type { VocalRange } from '../App';
 import { 
   loadLatencySettings, 
@@ -8,6 +8,7 @@ import {
   resetToDefault,
   type LatencySettings 
 } from '../lib/latencyCalibration';
+import LatencyCalibrationTest from './LatencyCalibrationTest';
 
 interface Props { 
   vocalRange: VocalRange | null; 
@@ -22,6 +23,7 @@ export default function SettingsView({ vocalRange, onClose, skillLevel, onChange
   const [dailyGoal, setDailyGoal] = useState(() => localStorage.getItem('setting_dailyGoal') || '10');
   const [latencySettings, setLatencySettings] = useState<LatencySettings>(loadLatencySettings());
   const [showLatencyDetails, setShowLatencyDetails] = useState(false);
+  const [showLatencyTest, setShowLatencyTest] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('setting_dailyGoal', dailyGoal);
@@ -45,6 +47,11 @@ export default function SettingsView({ vocalRange, onClose, skillLevel, onChange
     setLatencySettings(resetToDefault());
   };
 
+  const handleLatencyTestComplete = (newSettings: LatencySettings) => {
+    setLatencySettings(newSettings);
+    setShowLatencyTest(false);
+  };
+
   const handleResetProgress = () => {
     if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตข้อมูลทั้งหมด? (ช่วงเสียง, ระดับความสามารถ, และความคืบหน้าทั้งหมดจะถูกลบ)')) {
       localStorage.clear();
@@ -53,7 +60,16 @@ export default function SettingsView({ vocalRange, onClose, skillLevel, onChange
   };
 
   return (
-    <div className="home settings-page" style={{ paddingBottom: 100, animation: 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+    <>
+      {showLatencyTest && (
+        <LatencyCalibrationTest
+          currentSettings={latencySettings}
+          onComplete={handleLatencyTestComplete}
+          onCancel={() => setShowLatencyTest(false)}
+        />
+      )}
+      
+      <div className="home settings-page" style={{ paddingBottom: 100, animation: 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
       <header className="home-header" style={{display:'flex', justifyContent:'space-between', alignItems:'center', position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg)', borderBottom: '1px solid var(--border)'}}>
         <h1 style={{margin: 0}}>Settings</h1>
         <button className="cb" onClick={onClose} style={{width: 44, height: 44, borderRadius: 22, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>✕</button>
@@ -128,6 +144,50 @@ export default function SettingsView({ vocalRange, onClose, skillLevel, onChange
             background: 'var(--bg-secondary)',
             borderTop: '1px solid var(--border)'
           }}>
+            {/* Auto Test Button */}
+            <button
+              onClick={() => setShowLatencyTest(true)}
+              style={{
+                width: '100%',
+                padding: '16px',
+                background: 'linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '15px',
+                fontWeight: 700,
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                marginBottom: 20,
+                boxShadow: '0 4px 16px rgba(167, 139, 250, 0.3)',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(167, 139, 250, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(167, 139, 250, 0.3)';
+              }}
+            >
+              <Zap size={20} />
+              ทดสอบอัตโนมัติ (แนะนำ)
+            </button>
+
+            <div style={{
+              textAlign: 'center',
+              fontSize: 13,
+              color: 'var(--text2)',
+              marginBottom: 20,
+              fontWeight: 600
+            }}>
+              หรือปรับด้วยตัวเอง
+            </div>
+
             {/* Manual Offset Control */}
             <div style={{marginBottom: 20}}>
               <div style={{
@@ -272,5 +332,6 @@ export default function SettingsView({ vocalRange, onClose, skillLevel, onChange
         </div>
       </div>
     </div>
+    </>
   );
 }
