@@ -24,6 +24,7 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
   const [currentTest, setCurrentTest] = useState(0);
   const [isListening, setIsListening] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   
   const engineRef = useRef<AudioEngine | null>(null);
   const testStartTimeRef = useRef<number>(0);
@@ -44,6 +45,7 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
     setStep('testing');
     setCurrentTest(0);
     setTestResults([]);
+    setShowErrorModal(false);
     
     // Initialize audio engine
     if (!engineRef.current) {
@@ -52,9 +54,9 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
     
     try {
       await engineRef.current.start();
-      runSingleTest();
+      setTimeout(() => runSingleTest(), 500); // Small delay for mic to be ready
     } catch (error) {
-      alert('ไม่สามารถเข้าถึงไมค์ได้ กรุณาอนุญาตการใช้งานไมค์');
+      setShowErrorModal(true);
       setStep('intro');
     }
   };
@@ -90,13 +92,23 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
     
     // Listen for user's voice
     let pitchDetected = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    
+    const cleanup = () => {
+      if (engineRef.current) {
+        engineRef.current.onPitchDetected = null;
+      }
+      clearTimeout(timeoutId);
+    };
     
     engineRef.current.onPitchDetected = (freq, volume) => {
       if (pitchDetected) return;
       
-      // Check if user is singing (volume threshold and frequency close to target)
-      if (volume > 0.02 && freq && Math.abs(freq - TEST_FREQUENCY) < 100) {
+      // Check if user is singing (lower threshold for better detection)
+      if (volume > 0.01 && freq && Math.abs(freq - TEST_FREQUENCY) < 150) {
         pitchDetected = true;
+        cleanup();
+        
         detectedTimeRef.current = performance.now();
         
         const expectedTime = testStartTimeRef.current;
@@ -115,8 +127,9 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
         
         // Move to next test or show results
         setTimeout(() => {
-          if (currentTest + 1 < TOTAL_TESTS) {
-            setCurrentTest(prev => prev + 1);
+          const nextTest = currentTest + 1;
+          if (nextTest < TOTAL_TESTS) {
+            setCurrentTest(nextTest);
             runSingleTest();
           } else {
             showResults();
@@ -125,14 +138,14 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
       }
     };
     
-    // Timeout after 3 seconds
-    setTimeout(() => {
+    // Timeout after 5 seconds (increased from 3)
+    timeoutId = setTimeout(() => {
       if (!pitchDetected) {
+        cleanup();
         setIsListening(false);
-        alert('ไม่ตรวจพบเสียงของคุณ กรุณาลองอีกครั้ง');
-        runSingleTest();
+        setShowErrorModal(true);
       }
-    }, 3000);
+    }, 5000);
   };
 
   const showResults = () => {
@@ -550,6 +563,121 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
           50% { transform: scale(1.05); }
         }
       `}</style>
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001,
+          padding: 20
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: 20,
+            padding: 30,
+            maxWidth: 400,
+            width: '100%',
+            boxShadow: '0 20px 60px rgba(15, 23, 42, 0.3)'
+          }}>
+            <div style={{
+              width: 60,
+              height: 60,
+              margin: '0 auto 20px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              borderRadius: 30,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ef4444'
+            }}>
+              <AlertCircle size={32} />
+            </div>
+            
+            <h3 style={{
+              fontSize: 20,
+              fontWeight: 800,
+              textAlign: 'center',
+              marginBottom: 12,
+              color: 'var(--text)'
+            }}>
+              {step === 'intro' ? 'ไม่สามารถเข้าถึงไมค์' : 'ไม่ตรวจพบเสียง'}
+            </h3>
+            
+            <p style={{
+              fontSize: 14,
+              color: 'var(--text2)',
+              textAlign: 'center',
+              lineHeight: 1.6,
+              marginBottom: 24
+            }}>
+              {step === 'intro' 
+                ? 'กรุณาอนุญาตการใช้งานไมค์ในเบราว์เซอร์ของคุณ'
+                : 'กรุณาร้องเสียง "อา" หรือ "อี" ให้ดังขึ้น หรือเข้าใกล้ไมค์มากขึ้น'
+              }
+            </p>
+            
+            <div style={{ display: 'flex', gap: 12 }}>
+              {step === 'testing' && (
+                <button
+                  onClick={() => {
+                    setShowErrorModal(false);
+                    runSingleTest();
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: 14,
+                    background: '#a78bfa',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 12,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  ลองอีกครั้ง
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setShowErrorModal(false);
+                  if (step === 'intro') {
+                    // Already on intro, just close modal
+                  } else {
+                    // Go back to intro
+                    if (engineRef.current) {
+                      engineRef.current.stop();
+                      engineRef.current = null;
+                    }
+                    setStep('intro');
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  padding: 14,
+                  background: 'white',
+                  color: 'var(--text2)',
+                  border: '2px solid var(--border)',
+                  borderRadius: 12,
+                  fontSize: 15,
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {step === 'intro' ? 'ตกลง' : 'ยกเลิก'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
