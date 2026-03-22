@@ -90,6 +90,38 @@ export default function VocalRangeView({ onBack, onSave }: Props) {
 
   useEffect(() => () => engineRef.current?.stop(), []);
 
+  // Implement Wake Lock to prevent screen sleep while testing vocal range
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let wakeLock: any = null;
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          wakeLock = await (navigator as any).wakeLock.request('screen');
+        }
+      } catch (err) {
+        console.warn('Wake Lock error:', err);
+      }
+    };
+
+    if (isListening) {
+      requestWakeLock();
+    }
+
+    const handleVisibilityChange = () => {
+      if (wakeLock !== null && document.visibilityState === 'visible' && isListening) {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (wakeLock) { wakeLock.release().catch(() => {}); }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isListening]);
+
   // Canvas visualizer
   useEffect(() => {
     const canvas = canvasRef.current;

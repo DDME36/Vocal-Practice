@@ -131,6 +131,21 @@ export default function ExerciseDetail({ exercise, onClose, onStart }: Props) {
 
   const handleStart = () => {
     stopPreview();
+    
+    // iOS BUG FIX: Create AudioContext synchronously inside this click handler 
+    // to secure the user gesture token, then pass it to the practice view.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__sharedAudioContext = ctx;
+    } catch (e) {
+      console.warn('Failed to pre-warm AudioContext:', e);
+    }
+
     onStart();
   };
 

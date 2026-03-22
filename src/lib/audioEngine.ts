@@ -23,10 +23,20 @@ export class AudioEngine {
     // to ensure it captures the user gesture token and doesn't get stuck suspended.
     if (!this.audioContext || this.audioContext.state === 'closed') {
       try {
+        // Use the globally shared context created from the click handler if available
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const sharedCtx = (window as any).__sharedAudioContext;
+        if (sharedCtx) {
+          this.audioContext = sharedCtx;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (window as any).__sharedAudioContext = null; // Consume it
+        } else {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        
         // A synchronous resume attempt while the gesture is still active
-        if (this.audioContext.state === 'suspended') {
+        if (this.audioContext && this.audioContext.state === 'suspended') {
           this.audioContext.resume().catch(() => {});
         }
       } catch (e) {

@@ -98,18 +98,38 @@ body::before {
 #root {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100dvh; /* Fill mobile screen perfectly */
   max-width: 600px;
+  width: 100%;
   margin: 0 auto;
   position: relative;
   background: transparent;
+}
+
+/* Desktop App Mockup Frame */
+@media (min-width: 601px) {
+  body {
+    background: #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  #root {
+    height: 90vh;
+    max-height: 900px;
+    margin: 0;
+    border-radius: 40px;
+    box-shadow: 0 0 0 12px #0f172a, 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+  }
 }
 
 .main-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: 100px;
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── Tab Bar ── */
@@ -129,7 +149,8 @@ body::before {
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-top: 0.5px solid rgba(0, 0, 0, 0.08);
   z-index: 100;
-  height: 84px;
+  height: calc(84px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   border-radius: 20px 20px 0 0;
 }
 
@@ -208,12 +229,12 @@ body::before {
 .pv {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   background: var(--bg);
 }
 
 .pv-head {
-  padding: 16px 20px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 20px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -412,7 +433,7 @@ body::before {
 }
 
 .pv-foot {
-  padding: 20px;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
   background: var(--panel);
   border-top: 1px solid var(--border);
   box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.05);
@@ -488,12 +509,12 @@ body::before {
 .vr {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   background: var(--bg);
 }
 
 .vr-head {
-  padding: 16px 20px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 20px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -510,7 +531,7 @@ body::before {
 }
 
 .vr-actions {
-  padding: 20px;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -654,8 +675,8 @@ body::before {
 
 /* ── Exercises (HomeView) ── */
 .home {
-  padding: 20px 16px 120px;
-  min-height: calc(100vh - 84px); /* Subtract tab-bar height */
+  padding: calc(20px + env(safe-area-inset-top, 0px)) 16px calc(120px + env(safe-area-inset-bottom, 0px));
+  min-height: 100%;
   box-sizing: border-box;
 }
 

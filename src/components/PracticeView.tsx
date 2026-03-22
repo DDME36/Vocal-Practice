@@ -85,9 +85,41 @@ export default function PracticeView({ exercise, onBack }: Props) {
     if (engineRef.current) engineRef.current.noiseGate = val;
   };
 
-  // Countdown & Auto Calibration
+  // Countdown & Auto Calibration & Wake Lock
   useEffect(() => {
-    if (countdown <= 0) return;
+    // Implement Wake Lock to prevent screen sleep during practice
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let wakeLock: any = null;
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          wakeLock = await (navigator as any).wakeLock.request('screen');
+        }
+      } catch (err) {
+        console.warn('Wake Lock error:', err);
+      }
+    };
+    
+    // Request Wake Lock when running starts
+    if (running && !finished) {
+      requestWakeLock();
+    }
+    
+    const handleVisibilityChange = () => {
+      if (wakeLock !== null && document.visibilityState === 'visible' && running && !finished) {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    if (countdown <= 0) {
+      return () => {
+        if (wakeLock) { wakeLock.release().catch(() => {}); }
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
+    }
+
     const t = setTimeout(() => {
       const next = countdown - 1;
       countdownRef.current = next;
@@ -104,8 +136,13 @@ export default function PracticeView({ exercise, onBack }: Props) {
 
       if (next === 0) { setRunning(true); startRef.current = performance.now(); }
     }, 800);
-    return () => clearTimeout(t);
-  }, [countdown]);
+
+    return () => {
+      clearTimeout(t);
+      if (wakeLock) { wakeLock.release().catch(() => {}); }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [countdown, running, finished]);
 
   // Toggle pause
   const togglePause = useCallback(() => {
