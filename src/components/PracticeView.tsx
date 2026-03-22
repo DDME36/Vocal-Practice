@@ -44,7 +44,6 @@ export default function PracticeView({ exercise, onBack }: Props) {
   const [combo, setCombo] = useState(0);
   const [finalScore, setFinalScore] = useState({ hits: 0, total: 0, perfect: 0, good: 0, maxCombo: 0 });
   const [pitchFeedback, setPitchFeedback] = useState<'perfect' | 'high' | 'low' | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   // Compute note range for display
   const allMidis = exercise.notes.map(n => n.midi);

@@ -66,144 +66,51 @@ export default function TutorialOverlay({ onComplete }: { onComplete: () => void
   const step = TUTORIAL_STEPS[currentStep];
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(15, 23, 42, 0.98)',
-      zIndex: 10000,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-      animation: 'fadeIn 0.3s ease'
-    }}>
+    <div className="fixed inset-0 bg-slate-900/98 z-[10000] flex flex-col items-center justify-center p-5 animate-fadeIn">
       {/* Icon */}
-      <div style={{
-        fontSize: '80px',
-        marginBottom: '30px',
-        animation: 'bounce 1s ease infinite'
-      }}>
+      <div className="text-[80px] mb-[30px] animate-bounce">
         {step.icon}
       </div>
 
       {/* Content */}
-      <div style={{
-        maxWidth: '400px',
-        textAlign: 'center',
-        marginBottom: '40px'
-      }}>
-        <h2 style={{
-          fontSize: '28px',
-          fontWeight: 800,
-          color: '#fff',
-          marginBottom: '16px'
-        }}>
+      <div className="max-w-[400px] text-center mb-10">
+        <h2 className="text-[28px] font-extrabold text-white mb-4">
           {step.title}
         </h2>
-        <p style={{
-          fontSize: '16px',
-          color: '#cbd5e1',
-          lineHeight: 1.6,
-          margin: 0
-        }}>
+        <p className="text-base text-slate-300 leading-relaxed m-0">
           {step.description}
         </p>
       </div>
 
       {/* Progress dots */}
-      <div style={{
-        display: 'flex',
-        gap: '8px',
-        marginBottom: '30px'
-      }}>
+      <div className="flex gap-2 mb-[30px]">
         {TUTORIAL_STEPS.map((_, index) => (
           <div
             key={index}
-            style={{
-              width: index === currentStep ? '24px' : '8px',
-              height: '8px',
-              borderRadius: '4px',
-              background: index === currentStep ? '#a78bfa' : 'rgba(167, 139, 250, 0.3)',
-              transition: 'all 0.3s ease'
-            }}
+            className={`h-2 rounded transition-all duration-300 ${
+              index === currentStep 
+                ? 'w-6 bg-purple-400' 
+                : 'w-2 bg-purple-400/30'
+            }`}
           />
         ))}
       </div>
 
       {/* Buttons */}
-      <div style={{
-        display: 'flex',
-        gap: '12px',
-        width: '100%',
-        maxWidth: '400px'
-      }}>
+      <div className="flex gap-3 w-full max-w-[400px]">
         <button
           onClick={handleSkip}
-          style={{
-            flex: 1,
-            padding: '16px',
-            background: 'transparent',
-            border: '2px solid rgba(167, 139, 250, 0.3)',
-            borderRadius: '12px',
-            color: '#a78bfa',
-            fontSize: '16px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(167, 139, 250, 0.1)';
-            e.currentTarget.style.borderColor = '#a78bfa';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.borderColor = 'rgba(167, 139, 250, 0.3)';
-          }}
+          className="flex-1 px-4 py-4 bg-transparent border-2 border-purple-400/30 rounded-xl text-purple-400 text-base font-bold cursor-pointer transition-all duration-200 hover:bg-purple-400/10 hover:border-purple-400"
         >
           ข้าม
         </button>
         <button
           onClick={handleNext}
-          style={{
-            flex: 2,
-            padding: '16px',
-            background: 'linear-gradient(135deg, #6c5ce7, #a78bfa)',
-            border: 'none',
-            borderRadius: '12px',
-            color: '#fff',
-            fontSize: '16px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(167, 139, 250, 0.4)',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 16px rgba(167, 139, 250, 0.5)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(167, 139, 250, 0.4)';
-          }}
+          className="flex-[2] px-4 py-4 bg-gradient-to-br from-primary to-purple-400 border-none rounded-xl text-white text-base font-bold cursor-pointer shadow-[0_4px_12px_rgba(167,139,250,0.4)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(167,139,250,0.5)]"
         >
           {currentStep < TUTORIAL_STEPS.length - 1 ? 'ถัดไป' : 'เริ่มใช้งาน'}
         </button>
       </div>
-
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-      `}</style>
     </div>
   );
 }
