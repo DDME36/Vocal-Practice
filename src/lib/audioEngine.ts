@@ -18,6 +18,29 @@ export class AudioEngine {
 
   async start(): Promise<void> {
     this.stopped = false;
+
+    // iOS BUG FIX: Create AudioContext synchronously BEFORE any `await`
+    // to ensure it captures the user gesture token and doesn't get stuck suspended.
+    if (!this.audioContext || this.audioContext.state === 'closed') {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        // A synchronous resume attempt while the gesture is still active
+        if (this.audioContext.state === 'suspended') {
+          this.audioContext.resume().catch(() => {});
+        }
+      } catch (e) {
+        console.warn('Failed to start AudioContext synchronously:', e);
+      }
+    }
+
+    // iOS Safari Fix: Reset audio session before requesting mic
+    // This helps prevent iOS from getting stuck in a bad routing state
+    if ('audioSession' in navigator) {
+      try {
+        (navigator as any).audioSession.type = 'auto';
+      } catch (e) { /* ignore */ }
+    }
     
     // Request microphone permission first
     this.mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -30,13 +53,32 @@ export class AudioEngine {
         channelCount: 1
       },
     });
+
+    // iOS Safari Fix: Force 'play-and-record' type after mic is active
+    // This tells iOS to output sound to the Loudspeaker rather than the Earpiece
+    // Note: We use raw audio constraints (echoCancellation: false) above 
+    // to preserve pitch detection, which makes the recording sound like Voice Memos.
+    if ('audioSession' in navigator) {
+      try {
+        (navigator as any).audioSession.type = 'play-and-record';
+      } catch (e) {
+        console.warn('AudioSession API not supported', e);
+      }
+    }
     
-    // Create AudioContext (iOS requires user gesture)
-    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    // Ensure we have a context at this point
+    if (!this.audioContext) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
     
-    // iOS: Resume AudioContext if suspended
+    // iOS: Final resume attempt if still suspended
     if (this.audioContext.state === 'suspended') {
-      await this.audioContext.resume();
+      try {
+        await this.audioContext.resume();
+      } catch (e) {
+        console.warn('Failed to resume AudioContext:', e);
+      }
     }
     
     this.analyser = this.audioContext.createAnalyser();
@@ -208,6 +250,18 @@ export class AudioEngine {
     // ปิด audioContext (สำหรับ recording)
     if (this.audioContext && this.audioContext.state !== 'closed') {
       this.audioContext.close().catch(() => {});
+    }
+
+    // iOS Safari Fix: Return audio session to normal playback state
+    if ('audioSession' in navigator) {
+      try {
+        (navigator as any).audioSession.type = 'playback';
+        setTimeout(() => {
+          if ('audioSession' in navigator) {
+            try { (navigator as any).audioSession.type = 'auto'; } catch (e) { /* ignore */ }
+          }
+        }, 100);
+      } catch (e) { /* ignore */ }
     }
     
     // ไม่ปิด playbackContext เพื่อให้ preview ใช้ต่อได้

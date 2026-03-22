@@ -72,6 +72,11 @@ export default function PracticeView({ exercise, onBack }: Props) {
       }
     };
     engine.start().catch(() => alert('ไม่สามารถเข้าถึงไมโครโฟนได้'));
+
+    return () => {
+      engine.onPitchDetected = null;
+      engine.stop();
+    };
   }, []);
 
   // Handle tuning change
