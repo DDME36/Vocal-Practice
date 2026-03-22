@@ -1,31 +1,32 @@
 import { useState, useEffect } from 'react';
+import { Mic, Music, BookOpen, TrendingUp } from 'lucide-react';
 
 interface Step {
   title: string;
   description: string;
-  icon: string;
+  icon: React.ReactNode;
 }
 
 const TUTORIAL_STEPS: Step[] = [
   {
     title: 'ยินดีต้อนรับ!',
     description: 'Vocal Practice จะช่วยคุณฝึกร้องเพลงด้วย AI ตรวจจับระดับเสียงแบบเรียลไทม์',
-    icon: '🎤'
+    icon: <Mic size={48} strokeWidth={2} />
   },
   {
     title: 'วัดช่วงเสียง',
     description: 'เริ่มต้นด้วยการวัดช่วงเสียงของคุณ เพื่อให้แอปปรับแบบฝึกให้เหมาะสม',
-    icon: '🎵'
+    icon: <Music size={48} strokeWidth={2} />
   },
   {
     title: 'เลือกแบบฝึก',
     description: 'เลือกแบบฝึกจากหมวดต่างๆ: Runs, Scales, Arpeggios, Breathing และอื่นๆ',
-    icon: '🎹'
+    icon: <BookOpen size={48} strokeWidth={2} />
   },
   {
     title: 'ฝึกและติดตาม',
     description: 'ฝึกร้องตามเสียงนำ แอปจะให้คะแนนความแม่นยำและติดตามความก้าวหน้าของคุณ',
-    icon: '📊'
+    icon: <TrendingUp size={48} strokeWidth={2} />
   }
 ];
 
@@ -66,51 +67,168 @@ export default function TutorialOverlay({ onComplete }: { onComplete: () => void
   const step = TUTORIAL_STEPS[currentStep];
 
   return (
-    <div className="fixed inset-0 bg-slate-900/98 z-[10000] flex flex-col items-center justify-center p-5 animate-fadeIn">
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: '#fafbfc',
+      zIndex: 10000,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px',
+      animation: 'fadeIn 0.3s ease'
+    }}>
+      {/* Background decoration matching main app */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'radial-gradient(circle at 20% 30%, rgba(199, 210, 254, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(252, 231, 243, 0.08) 0%, transparent 50%)',
+        zIndex: -1,
+        pointerEvents: 'none'
+      }} />
+
       {/* Icon */}
-      <div className="text-[80px] mb-[30px] animate-bounce">
+      <div style={{
+        width: '120px',
+        height: '120px',
+        marginBottom: '30px',
+        background: 'linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)',
+        borderRadius: '32px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        boxShadow: '0 8px 24px rgba(167, 139, 250, 0.3)',
+        animation: 'iconFloat 3s ease-in-out infinite'
+      }}>
         {step.icon}
       </div>
 
       {/* Content */}
-      <div className="max-w-[400px] text-center mb-10">
-        <h2 className="text-[28px] font-extrabold text-white mb-4">
+      <div style={{
+        maxWidth: '400px',
+        textAlign: 'center',
+        marginBottom: '40px'
+      }}>
+        <h2 style={{
+          fontSize: '28px',
+          fontWeight: 800,
+          color: '#0f172a',
+          marginBottom: '16px'
+        }}>
           {step.title}
         </h2>
-        <p className="text-base text-slate-300 leading-relaxed m-0">
+        <p style={{
+          fontSize: '16px',
+          color: '#64748b',
+          lineHeight: 1.6,
+          margin: 0,
+          fontWeight: 500
+        }}>
           {step.description}
         </p>
       </div>
 
       {/* Progress dots */}
-      <div className="flex gap-2 mb-[30px]">
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        marginBottom: '30px'
+      }}>
         {TUTORIAL_STEPS.map((_, index) => (
           <div
             key={index}
-            className={`h-2 rounded transition-all duration-300 ${
-              index === currentStep 
-                ? 'w-6 bg-purple-400' 
-                : 'w-2 bg-purple-400/30'
-            }`}
+            style={{
+              width: index === currentStep ? '24px' : '8px',
+              height: '8px',
+              borderRadius: '4px',
+              background: index === currentStep ? '#a78bfa' : 'rgba(167, 139, 250, 0.3)',
+              transition: 'all 0.3s ease'
+            }}
           />
         ))}
       </div>
 
       {/* Buttons */}
-      <div className="flex gap-3 w-full max-w-[400px]">
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        width: '100%',
+        maxWidth: '400px'
+      }}>
         <button
           onClick={handleSkip}
-          className="flex-1 px-4 py-4 bg-transparent border-2 border-purple-400/30 rounded-xl text-purple-400 text-base font-bold cursor-pointer transition-all duration-200 hover:bg-purple-400/10 hover:border-purple-400"
+          style={{
+            flex: 1,
+            padding: '16px',
+            background: 'white',
+            border: '2px solid rgba(15, 23, 42, 0.08)',
+            borderRadius: '12px',
+            color: '#64748b',
+            fontSize: '16px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#f8fafc';
+            e.currentTarget.style.borderColor = 'rgba(167, 139, 250, 0.3)';
+            e.currentTarget.style.color = '#a78bfa';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'white';
+            e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.08)';
+            e.currentTarget.style.color = '#64748b';
+          }}
         >
           ข้าม
         </button>
         <button
           onClick={handleNext}
-          className="flex-[2] px-4 py-4 bg-gradient-to-br from-primary to-purple-400 border-none rounded-xl text-white text-base font-bold cursor-pointer shadow-[0_4px_12px_rgba(167,139,250,0.4)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(167,139,250,0.5)]"
+          style={{
+            flex: 2,
+            padding: '16px',
+            background: '#a78bfa',
+            border: 'none',
+            borderRadius: '12px',
+            color: '#fff',
+            fontSize: '16px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(167, 139, 250, 0.3)',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(167, 139, 250, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 16px rgba(167, 139, 250, 0.3)';
+          }}
         >
           {currentStep < TUTORIAL_STEPS.length - 1 ? 'ถัดไป' : 'เริ่มใช้งาน'}
         </button>
       </div>
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes iconFloat {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+      `}</style>
     </div>
   );
 }

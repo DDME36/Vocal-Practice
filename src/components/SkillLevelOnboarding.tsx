@@ -35,13 +35,44 @@ export default function SkillLevelOnboarding({ onComplete }: Props) {
   ];
 
   return (
-    <div className="absolute inset-0 bg-[#fafbfc] flex flex-col items-center justify-center p-6 z-[1000] overflow-y-auto">
+    <div style={{
+      position: 'absolute',
+      inset: 0,
+      background: '#fafbfc',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px',
+      zIndex: 1000,
+      overflowY: 'auto'
+    }}>
       {/* Background decoration matching main app */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(199,210,254,0.08)_0%,transparent_50%),radial-gradient(circle_at_80%_70%,rgba(252,231,243,0.08)_0%,transparent_50%)] -z-10 pointer-events-none" />
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'radial-gradient(circle at 20% 30%, rgba(199, 210, 254, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(252, 231, 243, 0.08) 0%, transparent 50%)',
+        zIndex: -1,
+        pointerEvents: 'none'
+      }} />
 
-      <div className="max-w-[500px] w-full text-center">
+      <div style={{
+        maxWidth: '500px',
+        width: '100%',
+        textAlign: 'center'
+      }}>
         {/* Icon */}
-        <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-purple-400 to-pink-500 rounded-3xl flex items-center justify-center shadow-[0_8px_24px_rgba(167,139,250,0.3)]">
+        <div style={{
+          width: '80px',
+          height: '80px',
+          margin: '0 auto 24px',
+          background: 'linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)',
+          borderRadius: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 8px 24px rgba(167, 139, 250, 0.3)'
+        }}>
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
@@ -49,33 +80,63 @@ export default function SkillLevelOnboarding({ onComplete }: Props) {
           </svg>
         </div>
         
-        <h1 className="text-[32px] font-extrabold text-slate-900 mb-2 tracking-tight">
+        <h1 style={{
+          fontSize: '32px',
+          fontWeight: 800,
+          color: '#0f172a',
+          marginBottom: '8px',
+          letterSpacing: '-0.5px'
+        }}>
           ยินดีต้อนรับ
         </h1>
         
-        <p className="text-base text-slate-600 mb-10 leading-relaxed font-medium">
+        <p style={{
+          fontSize: '16px',
+          color: '#64748b',
+          marginBottom: '40px',
+          lineHeight: 1.6,
+          fontWeight: 500
+        }}>
           เลือกระดับความสามารถของคุณ<br/>
           เพื่อให้เราแนะนำบทฝึกที่เหมาะสมที่สุด
         </p>
 
-        <div className="flex flex-col gap-3 mb-6">
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          marginBottom: '24px'
+        }}>
           {levels.map(level => (
             <button
               key={level.id}
               onClick={() => setSelected(level.id)}
-              className="bg-white rounded-[20px] p-5 px-6 cursor-pointer transition-all duration-200 text-left shadow-[0_2px_8px_rgba(15,23,42,0.08)]"
               style={{
+                background: selected === level.id ? 'white' : 'white',
                 border: selected === level.id ? `2px solid ${level.color}` : '2px solid rgba(15, 23, 42, 0.08)',
+                borderRadius: '20px',
+                padding: '20px 24px',
+                cursor: 'pointer',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                textAlign: 'left',
                 boxShadow: selected === level.id ? `0 4px 16px ${level.bg}` : '0 2px 8px rgba(15, 23, 42, 0.08)'
               }}
             >
-              <div 
-                className="text-lg font-bold mb-1.5"
-                style={{ color: selected === level.id ? level.color : '#0f172a' }}
-              >
+              <div style={{
+                fontSize: '18px',
+                fontWeight: 700,
+                color: selected === level.id ? level.color : '#0f172a',
+                marginBottom: '6px'
+              }}>
                 {level.title}
               </div>
-              <p className="m-0 text-sm text-slate-600 leading-normal font-medium">
+              <p style={{
+                margin: 0,
+                fontSize: '14px',
+                color: '#64748b',
+                lineHeight: 1.5,
+                fontWeight: 500
+              }}>
                 {level.description}
               </p>
             </button>
@@ -85,16 +146,29 @@ export default function SkillLevelOnboarding({ onComplete }: Props) {
         <button
           onClick={() => selected && onComplete(selected)}
           disabled={!selected}
-          className={`w-full px-4 py-4 border-none rounded-2xl text-base font-bold transition-all duration-300 ${
-            selected 
-              ? 'bg-purple-400 text-white cursor-pointer shadow-[0_4px_16px_rgba(167,139,250,0.3)]' 
-              : 'bg-purple-400/30 text-slate-900/25 cursor-not-allowed shadow-none'
-          }`}
+          style={{
+            width: '100%',
+            padding: '16px',
+            background: selected ? '#a78bfa' : 'rgba(167, 139, 250, 0.3)',
+            color: selected ? 'white' : 'rgba(15, 23, 42, 0.4)',
+            border: 'none',
+            borderRadius: '16px',
+            fontSize: '16px',
+            fontWeight: 700,
+            cursor: selected ? 'pointer' : 'not-allowed',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: selected ? '0 4px 16px rgba(167, 139, 250, 0.3)' : 'none'
+          }}
         >
           เริ่มต้นใช้งาน
         </button>
 
-        <p className="mt-5 text-[13px] text-slate-400 font-medium">
+        <p style={{
+          marginTop: '20px',
+          fontSize: '13px',
+          color: '#94a3b8',
+          fontWeight: 500
+        }}>
           คุณสามารถเปลี่ยนระดับได้ทุกเมื่อในการตั้งค่า
         </p>
       </div>
