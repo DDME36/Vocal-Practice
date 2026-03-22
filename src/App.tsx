@@ -7,6 +7,7 @@ import ExerciseDetail from './components/ExerciseDetail';
 import PracticeView from './components/PracticeView';
 import VocalRangeView from './components/VocalRangeView';
 import SkillLevelOnboarding from './components/SkillLevelOnboarding';
+import TutorialOverlay from './components/TutorialOverlay';
 import { EXERCISES, type Exercise, type ExerciseNote } from './lib/exercises';
 import { IconHeart, IconMusic, IconBookOpen, IconUser } from './components/Icons';
 
@@ -28,9 +29,15 @@ function adaptExercise(ex: Exercise, range: VocalRange): Exercise {
   
   // คำนวณช่วงคีย์ที่เหมาะสม
   const minRoot = range.lowMidi + 3;
-  const maxRoot = range.highMidi - exSpan - 2;
+  let maxRoot = range.highMidi - exSpan - 2;
   
-  // สุ่มคีย์ในช่วงที่เหมาะสม (แทนที่จะใช้คีย์เดิมเสมอ)
+  // ถ้าช่วงเสียงของผู้ใช้แคบกว่าความกว้างของแบบฝึกหัด จะทำให้ maxRoot < minRoot
+  // ในกรณีนี้ ให้ยึด minRoot เป็นหลัก เพื่อให้โน้ตต่ำสุดไม่ต่ำจนเกินไป
+  if (maxRoot < minRoot) {
+    maxRoot = minRoot;
+  }
+  
+  // สุ่มคีย์ในช่วงที่เหมาะสม
   const availableRange = Math.max(1, maxRoot - minRoot);
   const randomOffset = Math.floor(Math.random() * Math.min(availableRange, 7)); // สุ่มไม่เกิน 7 semitones
   const newRoot = Math.max(minRoot, Math.min(minRoot + randomOffset, maxRoot));
@@ -55,6 +62,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('foryou');
   const [view, setView] = useState<View>('tabs');
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [showTutorial, setShowTutorial] = useState(true);
   const [skillLevel, setSkillLevel] = useState<SkillLevel | null>(() => {
     try {
       const saved = localStorage.getItem('skillLevel');
@@ -94,7 +102,10 @@ export default function App() {
     : EXERCISES;
 
   const openExercise = (ex: Exercise) => {
-    const adapted = vocalRange ? adaptExercise(ex, vocalRange) : ex;
+    // ถ้าผู้ใช้ยังไม่เคยวัดเสียง (vocalRange เป็น null)
+    // ให้ใช้ Safe Default Range (C3 ถึง C4) เพื่อความปลอดภัยและร้องสบาย
+    const effectiveRange = vocalRange || { lowMidi: 48, highMidi: 60, voiceType: 'General' };
+    const adapted = adaptExercise(ex, effectiveRange);
     setSelectedExercise(adapted);
     setView('detail');
   };
@@ -102,26 +113,52 @@ export default function App() {
   const startPractice = () => setView('practice');
   const goHome = () => { setView('tabs'); setSelectedExercise(null); };
 
+  // Show tutorial first (if not seen before)
+  if (showTutorial) {
+    return <TutorialOverlay onComplete={() => setShowTutorial(false)} />;
+  }
+
   // Show onboarding if no skill level set
   if (!skillLevel) {
     return <SkillLevelOnboarding onComplete={saveSkillLevel} />;
   }
 
   if (view === 'detail' && selectedExercise) {
-    return <ExerciseDetail exercise={selectedExercise} onClose={goHome} onStart={startPractice} />;
+    return (
+      <div className="app view-transition">
+        <ExerciseDetail exercise={selectedExercise} onClose={goHome} onStart={startPractice} />
+      </div>
+    );
   }
   if (view === 'practice' && selectedExercise) {
-    return <PracticeView exercise={selectedExercise} onBack={() => setView('detail')} />;
+    return (
+      <div className="app view-transition">
+        <PracticeView exercise={selectedExercise} onBack={() => setView('detail')} />
+      </div>
+    );
   }
   if (view === 'range') {
-    return <VocalRangeView onBack={goHome} onSave={saveRange} />;
+    return (
+      <div className="app view-transition">
+        <VocalRangeView onBack={goHome} onSave={saveRange} />
+      </div>
+    );
   }
 
   return (
-    <div className="app">
-      <div className="tab-content" key={tab} style={{ 
-        animation: 'fadeIn 0.3s ease-in-out',
-        minHeight: '100vh'
+    <div className="app" style={{
+      position: 'relative',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      width: '100%',
+      overflow: 'hidden'
+    }}>
+      <div className="tab-content view-transition" key={tab} style={{ 
+        flex: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch'
       }}>
         {tab === 'foryou' && (
           <ForYouView

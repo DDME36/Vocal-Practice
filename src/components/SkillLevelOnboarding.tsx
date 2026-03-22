@@ -36,7 +36,7 @@ export default function SkillLevelOnboarding({ onComplete }: Props) {
 
   return (
     <div style={{
-      position: 'fixed',
+      position: 'absolute',
       inset: 0,
       background: '#fafbfc',
       display: 'flex',
@@ -44,7 +44,8 @@ export default function SkillLevelOnboarding({ onComplete }: Props) {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '24px',
-      zIndex: 1000
+      zIndex: 1000,
+      overflowY: 'auto'
     }}>
       {/* Background decoration matching main app */}
       <div style={{

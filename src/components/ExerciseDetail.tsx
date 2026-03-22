@@ -344,15 +344,25 @@ export default function ExerciseDetail({ exercise, onClose, onStart }: Props) {
           
           {exercise.breathingTip && (
             <div style={{
-              background: 'rgba(147, 197, 253, 0.1)',
-              padding: '10px',
-              borderRadius: '10px',
-              border: '1px solid rgba(147, 197, 253, 0.3)'
+              background: 'linear-gradient(to right, rgba(99, 102, 241, 0.04), transparent)',
+              padding: '14px 16px',
+              borderRadius: '0 12px 12px 0',
+              borderLeft: '4px solid #6366f1',
+              marginTop: '8px'
             }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#3b82f6', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                เคล็ดลับการหายใจ
+              <div style={{ 
+                fontSize: '11px', 
+                fontWeight: 800, 
+                color: '#6366f1', 
+                marginBottom: '6px', 
+                letterSpacing: '1px',
+                textTransform: 'uppercase'
+              }}>
+                คำแนะนำจากโค้ช
               </div>
-              <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.4, color: '#0f172a' }}>{exercise.breathingTip}</p>
+              <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.5, color: '#334155', fontWeight: 500 }}>
+                {exercise.breathingTip}
+              </p>
             </div>
           )}
         </div>

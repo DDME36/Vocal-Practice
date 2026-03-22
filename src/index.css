@@ -98,31 +98,11 @@ body::before {
 #root {
   display: flex;
   flex-direction: column;
-  height: 100dvh; /* Fill mobile screen perfectly */
-  max-width: 600px;
+  height: 100dvh; /* Fill screen perfectly */
   width: 100%;
   margin: 0 auto;
   position: relative;
   background: transparent;
-}
-
-/* Desktop App Mockup Frame */
-@media (min-width: 601px) {
-  body {
-    background: #cbd5e1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-  }
-  #root {
-    height: 90vh;
-    max-height: 900px;
-    margin: 0;
-    border-radius: 40px;
-    box-shadow: 0 0 0 12px #0f172a, 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-    overflow: hidden;
-  }
 }
 
 .main-content {
@@ -134,12 +114,10 @@ body::before {
 
 /* ── Tab Bar ── */
 .tab-bar {
-  position: fixed;
+  position: absolute;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
   width: 100%;
-  max-width: 600px;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -360,6 +338,19 @@ body::before {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.view-transition {
+  animation: fadeSlideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .res-overlay h2 {
@@ -736,12 +727,12 @@ body::before {
   font-size: 14px;
 }
 
-/* Grid Layout - 2 columns */
+/* Responsive Grid Layout */
 .ex-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
 .grid-card {
@@ -901,6 +892,8 @@ body::before {
 
 .fy-main-card {
   width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
   background: var(--panel);
   border: none;
   border-radius: 28px;
@@ -1019,8 +1012,8 @@ body::before {
 
 .fy-suggestions {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
 }
 
 .fy-sug-card {
