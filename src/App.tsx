@@ -8,6 +8,8 @@ import PracticeView from './components/PracticeView';
 import VocalRangeView from './components/VocalRangeView';
 import SkillLevelOnboarding from './components/SkillLevelOnboarding';
 import TutorialOverlay from './components/TutorialOverlay';
+import LatencyCalibrationTest from './components/LatencyCalibrationTest';
+import { loadLatencySettings, saveLatencySettings } from './lib/latencyCalibration';
 import { EXERCISES, type Exercise, type ExerciseNote } from './lib/exercises';
 import { IconHeart, IconMusic, IconBookOpen, IconUser } from './components/Icons';
 
@@ -69,6 +71,16 @@ export default function App() {
       return saved ? (saved as SkillLevel) : null;
     } catch { return null; }
   });
+  const [hasCalibratedLatency, setHasCalibratedLatency] = useState(() => {
+    try {
+      return localStorage.getItem('hasCalibratedLatency') === 'true';
+    } catch { return false; }
+  });
+  const [hasCompletedVocalRange, setHasCompletedVocalRange] = useState(() => {
+    try {
+      return localStorage.getItem('hasCompletedVocalRange') === 'true';
+    } catch { return false; }
+  });
   const [vocalRange, setVocalRange] = useState<VocalRange | null>(() => {
     try {
       const saved = localStorage.getItem('vocalRange');
@@ -121,6 +133,49 @@ export default function App() {
   // Show onboarding if no skill level set
   if (!skillLevel) {
     return <SkillLevelOnboarding onComplete={saveSkillLevel} />;
+  }
+
+  // Show calibration test if not done before
+  if (!hasCalibratedLatency) {
+    return (
+      <div className="app view-transition">
+        <LatencyCalibrationTest 
+          isOnboarding={true}
+          currentSettings={loadLatencySettings()}
+          onComplete={(newSettings) => {
+            saveLatencySettings(newSettings);
+            localStorage.setItem('hasCalibratedLatency', 'true');
+            setHasCalibratedLatency(true);
+          }}
+          onCancel={() => {
+            // Even if cancelled, we don't force them forever.
+            localStorage.setItem('hasCalibratedLatency', 'true');
+            setHasCalibratedLatency(true);
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Show vocal range check if not done before
+  if (!vocalRange && !hasCompletedVocalRange) {
+    return (
+      <div className="app view-transition">
+        <VocalRangeView 
+          onSave={(range) => {
+            saveRange(range);
+            localStorage.setItem('hasCompletedVocalRange', 'true');
+            setHasCompletedVocalRange(true);
+          }} 
+          onBack={() => {}} // not used in onboarding
+          isOnboarding={true}
+          onSkip={() => {
+            localStorage.setItem('hasCompletedVocalRange', 'true');
+            setHasCompletedVocalRange(true);
+          }}
+        />
+      </div>
+    );
   }
 
   if (view === 'detail' && selectedExercise) {

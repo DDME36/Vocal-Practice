@@ -10,6 +10,7 @@ interface Props {
   currentSettings: LatencySettings;
   onComplete: (newSettings: LatencySettings) => void;
   onCancel: () => void;
+  isOnboarding?: boolean;
 }
 
 interface TestResult {
@@ -18,7 +19,7 @@ interface TestResult {
   difference: number;
 }
 
-export default function LatencyCalibrationTest({ currentSettings, onComplete, onCancel }: Props) {
+export default function LatencyCalibrationTest({ currentSettings, onComplete, onCancel, isOnboarding }: Props) {
   const [step, setStep] = useState<'intro' | 'testing' | 'results'>('intro');
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [currentTest, setCurrentTest] = useState(0);
@@ -55,7 +56,7 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
     try {
       await engineRef.current.start();
       setTimeout(() => runSingleTest(), 500); // Small delay for mic to be ready
-    } catch (error) {
+    } catch {
       setShowErrorModal(true);
       setStep('intro');
     }
@@ -92,14 +93,20 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
     
     // Listen for user's voice
     let pitchDetected = false;
-    let timeoutId: ReturnType<typeof setTimeout>;
     
     const cleanup = () => {
       if (engineRef.current) {
         engineRef.current.onPitchDetected = null;
       }
-      clearTimeout(timeoutId);
     };
+    
+    const timeoutId = setTimeout(() => {
+      if (!pitchDetected) {
+        cleanup();
+        setIsListening(false);
+        setShowErrorModal(true);
+      }
+    }, 5000);
     
     engineRef.current.onPitchDetected = (freq, volume) => {
       if (pitchDetected) return;
@@ -108,6 +115,7 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
       if (volume > 0.01 && freq && Math.abs(freq - TEST_FREQUENCY) < 150) {
         pitchDetected = true;
         cleanup();
+        clearTimeout(timeoutId);
         
         detectedTimeRef.current = performance.now();
         
@@ -137,15 +145,6 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
         }, 1000);
       }
     };
-    
-    // Timeout after 5 seconds (increased from 3)
-    timeoutId = setTimeout(() => {
-      if (!pitchDetected) {
-        cleanup();
-        setIsListening(false);
-        setShowErrorModal(true);
-      }
-    }, 5000);
   };
 
   const showResults = () => {
@@ -225,7 +224,16 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
         </h2>
         <button
           onClick={onCancel}
-          style={{
+          style={isOnboarding ? {
+            padding: '8px 16px',
+            borderRadius: 20,
+            border: 'none',
+            background: 'rgba(15, 23, 42, 0.05)',
+            color: 'var(--text2)',
+            cursor: 'pointer',
+            fontSize: 14,
+            fontWeight: 600
+          } : {
             width: 40,
             height: 40,
             borderRadius: 20,
@@ -238,7 +246,7 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
             fontSize: 20
           }}
         >
-          ✕
+          {isOnboarding ? 'ข้ามการทดสอบ' : '✕'}
         </button>
       </div>
 
@@ -268,9 +276,15 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
               <Volume2 size={48} />
             </div>
 
-            <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 16 }}>
-              วิธีการทดสอบ
+            <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: 'var(--text)' }}>
+              {isOnboarding ? 'เตรียมความพร้อมอุปกรณ์' : 'วิธีการทดสอบ'}
             </h3>
+            {isOnboarding && (
+              <p style={{ color: 'var(--text2)', marginBottom: 24, lineHeight: 1.5, fontSize: 15 }}>
+                เพื่อให้การประเมินระดับเสียงร้องแม่นยำที่สุด<br />เราจำเป็นต้องทดสอบความล่าช้าของไมโครโฟนคุณ
+              </p>
+            )}
+            {!isOnboarding && <div style={{height: 16}}></div>}
             
             <div style={{
               textAlign: 'left',
@@ -533,7 +547,7 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
                   cursor: 'pointer'
                 }}
               >
-                ยกเลิก
+                {isOnboarding ? 'ข้าม' : 'ยกเลิก'}
               </button>
               <button
                 onClick={applyRecommendedSettings}
@@ -550,7 +564,7 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
                   boxShadow: '0 4px 16px rgba(167, 139, 250, 0.3)'
                 }}
               >
-                ใช้ค่าที่แนะนำ
+                {isOnboarding ? 'เริ่มต้นใช้งาน' : 'ใช้ค่าที่แนะนำ'}
               </button>
             </div>
           </div>

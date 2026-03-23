@@ -6,9 +6,11 @@ import type { VocalRange } from '../App';
 interface Props {
   onBack: () => void;
   onSave: (range: VocalRange) => void;
+  isOnboarding?: boolean;
+  onSkip?: () => void;
 }
 
-export default function VocalRangeView({ onBack, onSave }: Props) {
+export default function VocalRangeView({ onBack, onSave, isOnboarding, onSkip }: Props) {
   const engineRef = useRef<AudioEngine | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const volumeHistoryRef = useRef<number[]>([]);
@@ -195,8 +197,18 @@ export default function VocalRangeView({ onBack, onSave }: Props) {
   return (
     <div className="vr" style={{ animation: 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
       <div className="vr-head">
-        <button className="cb" onClick={() => { engineRef.current?.stop(); onBack(); }}>←</button>
-        <span className="vr-title">🎙️ ทดสอบช่วงเสียง</span>
+        {!isOnboarding ? (
+          <button className="cb" onClick={() => { engineRef.current?.stop(); onBack(); }}>←</button>
+        ) : (
+          <button 
+            className="cb" 
+            onClick={() => { engineRef.current?.stop(); onSkip?.(); }}
+            style={{ fontSize: '14px', width: 'auto', padding: '0 12px', background: 'rgba(15, 23, 42, 0.05)', border: 'none', color: 'var(--text2)', fontWeight: 600 }}
+          >
+            ข้าม
+          </button>
+        )}
+        <span className="vr-title">{isOnboarding ? '🎙️ จัดการช่วงเสียงของคุณ' : '🎙️ ทดสอบช่วงเสียง'}</span>
         <div style={{display: 'flex', alignItems: 'center', gap: '8px', background: '#f5f5f7', padding: '4px 12px', borderRadius: '20px'}}>
           <input
             type="range"
@@ -210,6 +222,7 @@ export default function VocalRangeView({ onBack, onSave }: Props) {
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 400, margin: '0 auto' }}>
         <p style={{ textAlign: 'center', color: '#86868b', fontSize: 13, lineHeight: 1.5, pointerEvents: 'none', marginBottom: 28, padding: '0 20px' }}>
+          {isOnboarding && <b>แอปจะปรับคีย์เพลงให้เข้ากับระดับเสียงคุณโดยอัตโนมัติ<br/><br/></b>}
           <b>วิธีวัดช่วงเสียง:</b> สูดลมหายใจลึกๆ กดเริ่มวัด แล้วร้องเสียง "อ้า" จาก <u>เสียงต่ำที่สุด</u> ไล่ยาวไปจนถึง <u>เสียงสูงที่สุด</u> ที่คุณออกเสียงได้ชัดเจน
         </p>
 
