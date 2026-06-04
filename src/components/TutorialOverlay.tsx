@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Mic, Music, BookOpen, TrendingUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Mic, Music, BookOpen, TrendingUp, Sparkles, ChevronRight } from 'lucide-react';
 
 interface Step {
   title: string;
@@ -10,23 +11,23 @@ interface Step {
 const TUTORIAL_STEPS: Step[] = [
   {
     title: 'ยินดีต้อนรับ!',
-    description: 'Vocal Practice จะช่วยคุณฝึกร้องเพลงด้วย AI ตรวจจับระดับเสียงแบบเรียลไทม์',
-    icon: <Mic size={48} strokeWidth={2} />
+    description: 'แอปฝึกร้องเพลงระดับมืออาชีพที่จะช่วยคุณพัฒนาทักษะด้วยระบบ AI ตรวจจับระดับเสียงเรียลไทม์ที่แม่นยำ',
+    icon: <Mic size={36} strokeWidth={2} />
   },
   {
-    title: 'วัดช่วงเสียง',
-    description: 'เริ่มต้นด้วยการวัดช่วงเสียงของคุณ เพื่อให้แอปปรับแบบฝึกให้เหมาะสม',
-    icon: <Music size={48} strokeWidth={2} />
+    title: 'วัดช่วงเสียงร้อง',
+    description: 'ประเมินและค้นหาประเภทเสียงที่แท้จริงของคุณ เพื่อให้แบบฝึกหัดทั้งหมดปรับแต่งให้เข้ากับเสียงของคุณพอดี',
+    icon: <Music size={36} strokeWidth={2} />
   },
   {
-    title: 'เลือกแบบฝึก',
-    description: 'เลือกแบบฝึกจากหมวดต่างๆ: Runs, Scales, Arpeggios, Breathing และอื่นๆ',
-    icon: <BookOpen size={48} strokeWidth={2} />
+    title: 'บทเรียนที่คัดสรรมาแล้ว',
+    description: 'เลือกฝึกฝนจากหมวดหมู่ที่เหมาะสม เช่น การคุมระดับเสียง, สเกล, ลมหายใจ และเทคนิคขั้นสูง',
+    icon: <BookOpen size={36} strokeWidth={2} />
   },
   {
-    title: 'ฝึกและติดตาม',
-    description: 'ฝึกร้องตามเสียงนำ แอปจะให้คะแนนความแม่นยำและติดตามความก้าวหน้าของคุณ',
-    icon: <TrendingUp size={48} strokeWidth={2} />
+    title: 'ติดตามความสำเร็จ',
+    description: 'ฝึกฝนต่อเนื่องสะสมคอมโบและรับคำแนะนำเชิงวิเคราะห์ส่วนตัวจากระบบ AI Vocal Coach ของเรา',
+    icon: <TrendingUp size={36} strokeWidth={2} />
   }
 ];
 
@@ -35,10 +36,9 @@ export default function TutorialOverlay({ onComplete }: { onComplete: () => void
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    // เช็คว่าเคยดู tutorial แล้วหรือยัง
     const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
     if (!hasSeenTutorial) {
-      setTimeout(() => setShow(true), 500);
+      setTimeout(() => setShow(true), 300);
     } else {
       onComplete();
     }
@@ -67,168 +67,91 @@ export default function TutorialOverlay({ onComplete }: { onComplete: () => void
   const step = TUTORIAL_STEPS[currentStep];
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: '#fafbfc',
-      zIndex: 10000,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-      animation: 'fadeIn 0.3s ease'
-    }}>
-      {/* Background decoration matching main app */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'radial-gradient(circle at 20% 30%, rgba(199, 210, 254, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(252, 231, 243, 0.08) 0%, transparent 50%)',
-        zIndex: -1,
-        pointerEvents: 'none'
-      }} />
-
-      {/* Icon */}
-      <div style={{
-        width: '120px',
-        height: '120px',
-        marginBottom: '30px',
-        background: 'linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)',
-        borderRadius: '32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        boxShadow: '0 8px 24px rgba(167, 139, 250, 0.3)',
-        animation: 'iconFloat 3s ease-in-out infinite'
-      }}>
-        {step.icon}
+    <div className="fixed inset-0 bg-sand z-[10000] flex flex-col items-center justify-between p-6 md:p-12 overflow-hidden select-none">
+      {/* Background Decorative Blobs */}
+      <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none z-0">
+        <div className="absolute top-[10%] left-[10%] w-[300px] h-[300px] rounded-full bg-clay-light/5 blur-[80px]" />
+        <div className="absolute bottom-[20%] right-[10%] w-[350px] h-[350px] rounded-full bg-sage-light/5 blur-[90px]" />
+        <div className="absolute top-[40%] right-[30%] w-[200px] h-[200px] rounded-full bg-ochre-light/5 blur-[70px]" />
       </div>
 
-      {/* Content */}
-      <div style={{
-        maxWidth: '400px',
-        textAlign: 'center',
-        marginBottom: '40px'
-      }}>
-        <h2 style={{
-          fontSize: '28px',
-          fontWeight: 800,
-          color: '#0f172a',
-          marginBottom: '16px'
-        }}>
-          {step.title}
-        </h2>
-        <p style={{
-          fontSize: '16px',
-          color: '#64748b',
-          lineHeight: 1.6,
-          margin: 0,
-          fontWeight: 500
-        }}>
-          {step.description}
-        </p>
-      </div>
-
-      {/* Progress dots */}
-      <div style={{
-        display: 'flex',
-        gap: '8px',
-        marginBottom: '30px'
-      }}>
-        {TUTORIAL_STEPS.map((_, index) => (
-          <div
-            key={index}
-            style={{
-              width: index === currentStep ? '24px' : '8px',
-              height: '8px',
-              borderRadius: '4px',
-              background: index === currentStep ? '#a78bfa' : 'rgba(167, 139, 250, 0.3)',
-              transition: 'all 0.3s ease'
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Buttons */}
-      <div style={{
-        display: 'flex',
-        gap: '12px',
-        width: '100%',
-        maxWidth: '400px'
-      }}>
+      {/* Skip Button Top Right */}
+      <div className="w-full flex justify-end relative z-10 pt-[env(safe-area-inset-top,0px)]">
         <button
           onClick={handleSkip}
-          style={{
-            flex: 1,
-            padding: '16px',
-            background: 'white',
-            border: '2px solid rgba(15, 23, 42, 0.08)',
-            borderRadius: '12px',
-            color: '#64748b',
-            fontSize: '16px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#f8fafc';
-            e.currentTarget.style.borderColor = 'rgba(167, 139, 250, 0.3)';
-            e.currentTarget.style.color = '#a78bfa';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'white';
-            e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.08)';
-            e.currentTarget.style.color = '#64748b';
-          }}
+          className="px-5 py-2.5 rounded-full text-taupe font-bold text-sm bg-sand-dark/50 hover:bg-sand-dark border border-stone-200/40 active:scale-95 transition-all cursor-pointer"
         >
           ข้าม
         </button>
-        <button
-          onClick={handleNext}
-          style={{
-            flex: 2,
-            padding: '16px',
-            background: '#a78bfa',
-            border: 'none',
-            borderRadius: '12px',
-            color: '#fff',
-            fontSize: '16px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(167, 139, 250, 0.3)',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(167, 139, 250, 0.4)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 16px rgba(167, 139, 250, 0.3)';
-          }}
-        >
-          {currentStep < TUTORIAL_STEPS.length - 1 ? 'ถัดไป' : 'เริ่มใช้งาน'}
-        </button>
       </div>
 
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes iconFloat {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-      `}</style>
+      {/* Main Content Box */}
+      <div className="flex-1 w-full max-w-md flex flex-col items-center justify-center relative z-10 my-8">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, scale: 0.96, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.04, y: -15 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full flex flex-col items-center text-center"
+          >
+            {/* Animated Icon Container */}
+            <div className="w-24 h-24 mb-10 bg-gradient-to-br from-[#e9dfce] to-sand-dark rounded-[2.2rem] flex items-center justify-center text-clay shadow-sm border border-white relative">
+              <div className="absolute -top-1 -right-1">
+                <Sparkles size={18} className="text-ochre" />
+              </div>
+              <motion.div
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              >
+                {step.icon}
+              </motion.div>
+            </div>
+
+            {/* Title */}
+            <h2 className="text-3xl font-black text-charcoal mb-4 leading-tight tracking-tight">
+              {step.title}
+            </h2>
+
+            {/* Description */}
+            <p className="text-base text-taupe leading-relaxed font-medium px-4">
+              {step.description}
+            </p>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Bottom Controls */}
+      <div className="w-full max-w-md flex flex-col items-center gap-8 relative z-10 pb-[env(safe-area-inset-bottom,0px)]">
+        {/* Step dots */}
+        <div className="flex gap-2">
+          {TUTORIAL_STEPS.map((_, index) => (
+            <div
+              key={index}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                index === currentStep 
+                  ? 'w-6 bg-clay' 
+                  : 'w-2 bg-stone-200/80 hover:bg-stone-300'
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Next Button */}
+        <button
+          onClick={handleNext}
+          className="w-full bg-charcoal text-white hover:bg-clay py-5 rounded-full font-black text-lg flex items-center justify-center gap-2 shadow-lg shadow-charcoal/10 hover:shadow-clay/20 active:scale-[0.98] transition-all cursor-pointer"
+        >
+          {currentStep < TUTORIAL_STEPS.length - 1 ? (
+            <>
+              ถัดไป <ChevronRight size={20} />
+            </>
+          ) : (
+            'เริ่มต้นใช้งาน'
+          )}
+        </button>
+      </div>
     </div>
   );
 }

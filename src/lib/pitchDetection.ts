@@ -9,13 +9,30 @@ export function detectPitch(buffer: Float32Array, sampleRate: number, noiseGate:
   const SIZE = buffer.length;
   const HALF_SIZE = Math.floor(SIZE / 2);
 
-  // 1. Noise gate - reject silent input
+  // 1. Pre-filtering: 1st-order IIR Bandpass Filter (70Hz - 1200Hz) to remove noise
+  // Low-pass: fc = 1200Hz, alpha = 0.15
+  const alpha_lp = 0.15;
+  const lpFiltered = new Float32Array(SIZE);
+  lpFiltered[0] = buffer[0];
+  for (let i = 1; i < SIZE; i++) {
+    lpFiltered[i] = lpFiltered[i - 1] + alpha_lp * (buffer[i] - lpFiltered[i - 1]);
+  }
+
+  // High-pass: fc = 70Hz, alpha = 0.99
+  const alpha_hp = 0.99;
+  const filtered = new Float32Array(SIZE);
+  filtered[0] = lpFiltered[0];
+  for (let i = 1; i < SIZE; i++) {
+    filtered[i] = alpha_hp * (filtered[i - 1] + lpFiltered[i] - lpFiltered[i - 1]);
+  }
+
+  // 2. Noise gate - reject silent input (calculated on filtered signal)
   let rms = 0;
-  for (let i = 0; i < SIZE; i++) rms += buffer[i] * buffer[i];
+  for (let i = 0; i < SIZE; i++) rms += filtered[i] * filtered[i];
   rms = Math.sqrt(rms / SIZE);
   if (rms < noiseGate) return null;
 
-  // 2. Search range: 60 Hz (low bass) to Nyquist
+  // 3. Search range: 60 Hz (low bass) to Nyquist
   const MIN_FREQ = 60;
   const MAX_TAU = Math.min(HALF_SIZE, Math.floor(sampleRate / MIN_FREQ));
   
@@ -26,11 +43,11 @@ export function detectPitch(buffer: Float32Array, sampleRate: number, noiseGate:
   }
   const yinBuffer = globalYinBuffer;
 
-  // 3. YIN difference function
+  // 4. YIN difference function (using filtered signal)
   for (let t = 0; t < MAX_TAU; t++) {
     yinBuffer[t] = 0;
     for (let i = 0; i < SIZE - MAX_TAU; i++) {
-        const delta = buffer[i] - buffer[i + t];
+        const delta = filtered[i] - filtered[i + t];
         yinBuffer[t] += delta * delta;
     }
   }

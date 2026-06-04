@@ -1,280 +1,239 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useState } from 'react';
+import { motion } from 'motion/react';
+import { Activity, Trophy, Zap, Clock, Music, Play, Plus } from 'lucide-react';
 import type { Exercise } from '../lib/exercises';
-import type { VocalRange } from '../App';
-import { midiToNoteName } from '../lib/noteUtils';
-import { IconMic } from './Icons';
+import { useProgressStore } from '../stores/useProgressStore';
+import { useStatsStore } from '../stores/useStatsStore';
 
 interface Props {
   exercises: Exercise[];
-  vocalRange: VocalRange | null;
   onSelect: (ex: Exercise) => void;
-  onRange: () => void;
   skillLevel?: 'beginner' | 'intermediate' | 'advanced' | null;
 }
 
-function MiniRoll({ exercise, size = 120 }: { exercise: Exercise; size?: number }) {
-  const ref = useRef<HTMLCanvasElement>(null);
+export default function HomeView({ exercises, onSelect }: Props) {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   
-  // Get category color
-  const getCategoryColors = (category: string): [string, string] => {
-    const cat = category.toUpperCase();
-    switch (cat) {
-      case 'WARM-UPS': return ['#fbbf24', '#f59e0b'];
-      case 'SCALES': return ['#06b6d4', '#0891b2'];
-      case 'RUNS': return ['#a78bfa', '#ec4899'];
-      case 'ARPEGGIOS': return ['#34d399', '#10b981'];
-      case 'ARTICULATION': return ['#f472b6', '#ec4899'];
-      case 'BREATHING': return ['#60a5fa', '#3b82f6'];
-      case 'RESONANCE': return ['#c084fc', '#a855f7'];
-      case 'DYNAMICS': return ['#fb923c', '#f97316'];
-      default: return ['#a78bfa', '#ec4899'];
-    }
-  };
+  // Fixed #1: Use Zustand stores instead of direct localStorage access
+  const { progress } = useProgressStore();
+  const { stats } = useStatsStore();
+
+  const categories = Array.from(new Set(exercises.map(ex => ex.category || 'อื่นๆ')));
   
-  const draw = useCallback(() => {
-    const canvas = ref.current;
-    if (!canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    const W = size;
-    const H = size * 0.6;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
-    const ctx = canvas.getContext('2d')!;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    
-    const notes = exercise.notes.filter(n => !n.isChord);
-    if (!notes.length) return;
-    
-    // แสดงแค่ pattern แรก (ไม่ซ้ำ)
-    // หาว่า pattern จบที่ beat ไหน โดยดูจาก rest/gap ที่ยาว
-    let firstPatternEnd = 0;
-    for (let i = 0; i < notes.length - 1; i++) {
-      const currentEnd = notes[i].startBeat + Math.abs(notes[i].durationBeats);
-      const nextStart = notes[i + 1].startBeat;
-      const gap = nextStart - currentEnd;
-      
-      // ถ้ามี gap มากกว่า 0.5 beat แสดงว่าจบ pattern แล้ว
-      if (gap > 0.5) {
-        firstPatternEnd = i + 1;
-        break;
-      }
-    }
-    
-    // ถ้าไม่เจอ gap ให้แสดงแค่ 8 โน้ตแรก
-    if (firstPatternEnd === 0) {
-      firstPatternEnd = Math.min(8, notes.length);
-    }
-    
-    const displayNotes = notes.slice(0, firstPatternEnd);
-    if (!displayNotes.length) return;
-    
-    // Normalize startBeat to 0 to remove empty space left by skipped reference chords
-    const minStartBeat = Math.min(...displayNotes.map(n => n.startBeat));
-    const normalizedNotes = displayNotes.map(n => ({
-      ...n,
-      startBeat: n.startBeat - minStartBeat
-    }));
+  const filteredExercises = selectedCategory
+    ? exercises.filter(ex => ex.category === selectedCategory)
+    : exercises;
 
-    const midis = normalizedNotes.map(n => n.midi);
-    const minM = Math.min(...midis) - 1;
-    const maxM = Math.max(...midis) + 1;
-    const totalBeats = Math.max(...normalizedNotes.map(n => n.startBeat + Math.abs(n.durationBeats)));
-    
-    const rowH = H / (maxM - minM + 1);
-    const pxPerBeat = W / (totalBeats || 1);
-    
-    const [color1, color2] = getCategoryColors(exercise.category);
-    
-    const cat = (exercise.category || '').toUpperCase();
-    const isLineStyle = cat === 'RUNS' || cat === 'ARPEGGIOS' || cat === 'RANGE EXPANSION';
-    const isBarChart = cat === 'ARTICULATION' || cat === 'BELTING' || cat === 'BREATHING';
+  const recentExercises = progress?.completedExercises
+    .slice(-4)
+    .map(id => exercises.find(ex => ex.id === id))
+    .filter(Boolean) as Exercise[] || [];
 
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+  const pathExercise = progress?.recommendedExercises?.length 
+    ? exercises.find(ex => ex.id === progress.recommendedExercises[0]) || exercises[0] 
+    : exercises[0];
 
-    const points = normalizedNotes.map(nt => {
-      const x = nt.startBeat * pxPerBeat;
-      const y = (maxM - nt.midi) * rowH + rowH * 0.2;
-      const w = Math.max(Math.abs(nt.durationBeats) * pxPerBeat - 2, 4);
-      const h = rowH * 0.6;
-      return { x, y, w, h, cx: x + w / 2, cy: y + h / 2 };
-    });
-
-    if (isLineStyle && points.length > 0) {
-      // Connect points with a glowing thick line + dots
-      ctx.beginPath();
-      ctx.moveTo(points[0].cx, points[0].cy);
-      for (let i = 1; i < points.length; i++) {
-        ctx.lineTo(points[i].cx, points[i].cy);
-      }
-      ctx.strokeStyle = color1;
-      ctx.lineWidth = 4;
-      ctx.globalAlpha = 0.5;
-      ctx.stroke();
-      
-      points.forEach(p => {
-        ctx.beginPath();
-        ctx.arc(p.cx, p.cy, 6, 0, Math.PI * 2);
-        ctx.fillStyle = color2;
-        ctx.globalAlpha = 1.0;
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      });
-    } else if (isBarChart) {
-      // Bar chart style (Pillars from bottom)
-      points.forEach(p => {
-        const gradient = ctx.createLinearGradient(p.x, p.y, p.x, H);
-        gradient.addColorStop(0, color1);
-        gradient.addColorStop(1, 'transparent');
-        ctx.fillStyle = gradient;
-        
-        ctx.beginPath();
-        const barW = Math.max(p.w * 0.6, 8);
-        const bx = p.cx - barW / 2;
-        if (ctx.roundRect) ctx.roundRect(bx, p.y, barW, H - p.y, barW/2);
-        else ctx.rect(bx, p.y, barW, H - p.y);
-        ctx.fill();
-        
-        ctx.fillStyle = color2;
-        ctx.beginPath();
-        ctx.arc(p.cx, p.y + barW/2, barW/2, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    } else {
-      // Default: rounded rectangles (Scales, Warm-ups)
-      points.forEach(p => {
-        const gradient = ctx.createLinearGradient(p.x, p.y, p.x + p.w, p.y + p.h);
-        gradient.addColorStop(0, color1);
-        gradient.addColorStop(1, color2);
-        ctx.fillStyle = gradient;
-        
-        ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(p.x, p.y, p.w, p.h, p.h / 2);
-        else ctx.rect(p.x, p.y, p.w, p.h);
-        ctx.fill();
-      });
-    }
-  }, [exercise, size]);
-  
-  useEffect(() => { draw(); }, [draw]);
-  return <canvas ref={ref} style={{ display: 'block' }} />;
-}
-
-export default function HomeView({ exercises, vocalRange, onSelect, onRange, skillLevel }: Props) {
-  // Group by category, handle empty category (for the top section runs)
-  const categories = new Map<string, Exercise[]>();
-  exercises.forEach(ex => {
-    const cat = ex.category || 'RUNS';
-    if (!categories.has(cat)) categories.set(cat, []);
-    categories.get(cat)!.push(ex);
-  });
+  const currentStep = (progress?.completedExercises?.length || 0) + 1;
 
   return (
-    <div className="home">
-      <header className="home-header">
-        <h1>Exercises</h1>
-      </header>
+    <div className="min-h-full bg-sand pb-32 pt-12 px-6">
+      
+      {/* Header */}
+      <div className="mb-10 mt-6">
+        <h1 className="text-4xl font-black text-charcoal tracking-tight mb-2">
+          คลังบทเรียน
+        </h1>
+        <p className="text-taupe font-medium text-lg">
+          ฝึกฝนและบำรุงเสียงของคุณในทุกๆ วัน
+        </p>
+      </div>
 
-      {/* Adapted Badge */}
-      {vocalRange && (
-        <div className="adapted-badge" onClick={onRange} style={{
-          background: 'var(--bg-secondary)',
-          color: 'var(--text)',
-          padding: '12px 16px',
-          borderRadius: '20px',
-          marginBottom: '24px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
-          border: '1px solid var(--border)',
-          fontSize: '13px',
-          fontWeight: 600,
-        }}>
-          <IconMic size={16}/>
-          <span>
-            {vocalRange.voiceType} · {midiToNoteName(vocalRange.lowMidi)}-{midiToNoteName(vocalRange.highMidi)}
-          </span>
+      {/* Organic Stats Row */}
+      <div className="flex gap-4 mb-10 overflow-x-auto hide-scrollbar -mx-6 px-6 snap-x">
+        <div className="min-w-[140px] snap-start bg-white/60 backdrop-blur-sm p-5 rounded-[2rem] border border-stone-200/60 shadow-sm flex flex-col items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-sage-light/30 flex items-center justify-center text-sage-dark mb-3">
+            <Activity size={20} />
+          </div>
+          <div className="text-3xl font-black text-charcoal leading-none mb-1">{stats.totalExercises}</div>
+          <div className="text-[10px] font-bold text-taupe uppercase tracking-widest">ครั้งที่ฝึก</div>
         </div>
-      )}
-
-      {/* Skill Level Badge */}
-      {skillLevel && (
-        <div style={{
-          background: 'white',
-          border: '1px solid rgba(15, 23, 42, 0.08)',
-          borderRadius: '16px',
-          padding: '12px 16px',
-          marginBottom: '24px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '13px',
-          fontWeight: 600,
-          color: '#64748b',
-          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)'
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M3 3h18v18H3z"/>
-            <path d="M9 9h6v6H9z"/>
-          </svg>
-          <span>
-            แสดงบทฝึกสำหรับระดับ: <span style={{ 
-              color: skillLevel === 'beginner' ? '#10b981' : 
-                     skillLevel === 'intermediate' ? '#f59e0b' : '#ef4444',
-              fontWeight: 700
-            }}>
-              {skillLevel === 'beginner' && 'เริ่มต้น'}
-              {skillLevel === 'intermediate' && 'ปานกลาง'}
-              {skillLevel === 'advanced' && 'ขั้นสูง'}
-            </span>
-          </span>
+        
+        <div className="min-w-[140px] snap-start bg-clay p-5 rounded-[2rem] shadow-lg shadow-clay/20 flex flex-col items-center justify-center text-white relative overflow-hidden">
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full blur-xl" />
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mb-3">
+            <Trophy size={20} />
+          </div>
+          <div className="text-3xl font-black leading-none mb-1">{stats.currentStreak}</div>
+          <div className="text-[10px] font-bold uppercase tracking-widest opacity-80">วันต่อเนื่อง</div>
         </div>
-      )}
 
-      {/* Render top-level uncategorized runs first */}
-      {categories.has('RUNS') && (
-        <div className="cat-section">
-          <div className="ex-grid">
-            {categories.get('RUNS')!.map((ex) => (
-              <div key={ex.id} className="grid-card" onClick={() => onSelect(ex)}>
-                <div className="gc-canvas">
-                  <MiniRoll exercise={ex} size={140} />
-                </div>
-                <div className="gc-name">{ex.name}</div>
+        <div className="min-w-[140px] snap-start bg-white/60 backdrop-blur-sm p-5 rounded-[2rem] border border-stone-200/60 shadow-sm flex flex-col items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-ochre-light/30 flex items-center justify-center text-ochre-dark mb-3">
+            <Zap size={20} />
+          </div>
+          <div className="text-3xl font-black text-charcoal leading-none mb-1">{stats.maxCombo}</div>
+          <div className="text-[10px] font-bold text-taupe uppercase tracking-widest">คอมโบสูงสุด</div>
+        </div>
+      </div>
+
+      {/* Guided Path / Daily Focus */}
+      <div className="mb-12">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-black text-charcoal">เส้นทางของคุณ</h2>
+          <span className="text-xs font-bold text-sage-dark bg-sage-light/20 px-3 py-1 rounded-full uppercase tracking-widest">แนะนำสำหรับคุณ</span>
+        </div>
+        
+        <div className="bg-gradient-to-br from-[#e9dfce] to-sand-dark rounded-[2.5rem] p-6 shadow-sm border border-white relative overflow-hidden group cursor-pointer"
+             onClick={() => {
+               if (pathExercise) onSelect(pathExercise);
+             }}
+        >
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/40 rounded-full blur-2xl transition-transform group-hover:scale-150 duration-700" />
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-clay-light/20 rounded-full blur-2xl transition-transform group-hover:scale-150 duration-700 delay-100" />
+          
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-6">
+              <div className="w-14 h-14 rounded-full bg-white shadow-md flex items-center justify-center text-clay-dark">
+                <Play size={24} className="ml-1 fill-current" />
               </div>
+              <div className="flex -space-x-2">
+                <div className="w-10 h-10 rounded-full bg-sage-light/80 border-2 border-white flex items-center justify-center text-[10px] font-bold text-sage-dark">1</div>
+                <div className="w-10 h-10 rounded-full bg-ochre-light/80 border-2 border-white flex items-center justify-center text-[10px] font-bold text-ochre-dark">2</div>
+                <div className="w-10 h-10 rounded-full bg-white/60 backdrop-blur-sm border-2 border-white flex items-center justify-center text-[10px] font-bold text-taupe">+3</div>
+              </div>
+            </div>
+            
+            <div className="text-[10px] font-bold text-taupe uppercase tracking-widest mb-2">ขั้นตอนที่ {currentStep}</div>
+            
+            <h3 className="text-2xl font-black text-charcoal leading-tight mb-2">
+              {pathExercise?.name || 'วอร์มเสียงพื้นฐาน'}
+            </h3>
+            
+            <p className="text-charcoal/70 font-medium text-sm line-clamp-2">
+              {pathExercise?.goal || 'สร้างรากฐานที่ดีด้วยบทฝึกสำคัญนี้'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent / Continue */}
+      {recentExercises.length > 0 && (
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-charcoal">ฝึกซ้อมต่อ</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            {recentExercises.slice(0,2).map(ex => (
+              <motion.div
+                key={`recent-${ex.id}`}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                onClick={() => onSelect(ex)}
+                className="bg-white/80 backdrop-blur-md p-4 rounded-[1.5rem] border border-stone-200/50 flex items-center gap-5 cursor-pointer shadow-sm hover:shadow-md transition-all"
+              >
+                <div className="w-14 h-14 bg-sand-dark rounded-full flex items-center justify-center text-charcoal shrink-0">
+                  <Play size={20} className="fill-current ml-1" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold text-taupe uppercase tracking-widest mb-1">
+                    {ex.category}
+                  </div>
+                  <h4 className="text-lg font-bold text-charcoal truncate">
+                    {ex.name}
+                  </h4>
+                </div>
+              </motion.div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Render Categorized SCALES, etc. */}
-      {Array.from(categories.entries()).map(([cat, list]) => {
-        if (cat === 'RUNS') return null;
+      {/* Categories Filter (Pills) */}
+      <div className="mb-8 -mx-6 px-6">
+        <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory hide-scrollbar">
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className={`snap-start whitespace-nowrap px-6 py-3 rounded-full font-bold text-sm transition-all shadow-sm ${
+              !selectedCategory 
+                ? 'bg-charcoal text-white' 
+                : 'bg-white/60 text-charcoal border border-stone-200/50 hover:bg-white'
+            }`}
+          >
+            หมวดหมู่ทั้งหมด
+          </button>
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`snap-start whitespace-nowrap px-6 py-3 rounded-full font-bold text-sm transition-all shadow-sm ${
+                selectedCategory === cat 
+                  ? 'bg-charcoal text-white' 
+                  : 'bg-white/60 text-charcoal border border-stone-200/50 hover:bg-white'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Exercises Masonry/Grid */}
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-charcoal">
+            {selectedCategory ? selectedCategory : 'สำรวจทั้งหมด'}
+          </h2>
+          <span className="text-sm font-bold text-taupe">
+            {filteredExercises.length} รายการ
+          </span>
+        </div>
         
-        return (
-          <div key={cat} className="cat-section">
-            <div className="cat-header">
-              <div className="cat-name">{cat}</div>
-            </div>
-            <div className="ex-grid">
-              {list.map((ex) => (
-                <div key={ex.id} className="grid-card" onClick={() => onSelect(ex)}>
-                  <div className="gc-canvas">
-                    <MiniRoll exercise={ex} size={140} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredExercises.map((ex, i) => (
+            <motion.div
+              key={ex.id}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => onSelect(ex)}
+              className="bg-white/80 backdrop-blur-md p-6 rounded-[2rem] border border-stone-200/50 cursor-pointer shadow-sm hover:shadow-lg transition-all flex flex-col h-full relative overflow-hidden group"
+            >
+              {/* Soft decorative blob */}
+              <div className={`absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-10 transition-transform group-hover:scale-150 blur-2xl ${
+                i % 3 === 0 ? 'bg-clay' : i % 3 === 1 ? 'bg-sage' : 'bg-ochre'
+              }`} />
+
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="w-12 h-12 rounded-full bg-sand-dark flex items-center justify-center text-charcoal">
+                    <Music size={20} />
                   </div>
-                  <div className="gc-name">{ex.name}</div>
+                  <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-charcoal shadow-sm border border-stone-100 group-hover:bg-charcoal group-hover:text-white transition-colors">
+                    <Plus size={18} />
+                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
+                
+                <div className="text-[10px] font-bold text-taupe uppercase tracking-widest mb-2">
+                  {ex.category}
+                </div>
+                
+                <h4 className="text-xl font-black text-charcoal leading-tight mb-4">
+                  {ex.name}
+                </h4>
+                
+                <div className="flex items-center gap-4 pt-4 border-t border-stone-100 mt-auto">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-taupe">
+                    <Clock size={14} /> {Math.ceil(ex.notes.length / 4)}m
+                  </div>
+                  <div className="w-1 h-1 rounded-full bg-stone-300" />
+                  <div className="text-xs font-bold text-taupe capitalize">
+                    {ex.difficulty === 'beginner' ? 'เริ่มต้น' : ex.difficulty === 'intermediate' ? 'ปานกลาง' : ex.difficulty === 'advanced' ? 'ขั้นสูง' : 'ปานกลาง'}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

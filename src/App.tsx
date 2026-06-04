@@ -1,7 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
-import ForYouView from './components/ForYouView';
-import ExercisesView from './components/HomeView';
-import TheoryView from './components/TheoryView';
+import { useEffect, useState, useRef } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'motion/react';
+import { Heart, User } from 'lucide-react';
+
+import HomeView from './components/HomeView';
 import ProfileView from './components/ProfileView';
 import ExerciseDetail from './components/ExerciseDetail';
 import PracticeView from './components/PracticeView';
@@ -9,259 +11,241 @@ import VocalRangeView from './components/VocalRangeView';
 import SkillLevelOnboarding from './components/SkillLevelOnboarding';
 import TutorialOverlay from './components/TutorialOverlay';
 import LatencyCalibrationTest from './components/LatencyCalibrationTest';
-import { loadLatencySettings, saveLatencySettings } from './lib/latencyCalibration';
-import { EXERCISES, type Exercise, type ExerciseNote } from './lib/exercises';
-import { IconHeart, IconMusic, IconBookOpen, IconUser } from './components/Icons';
+import LevelUpModal from './components/LevelUpModal';
 
-type Tab = 'foryou' | 'exercises' | 'theory' | 'profile';
-type View = 'tabs' | 'detail' | 'practice' | 'range';
-type SkillLevel = 'beginner' | 'intermediate' | 'advanced';
+import { useSettingsStore } from './stores/useSettingsStore';
+import { useProgressStore } from './stores/useProgressStore';
+import { EXERCISES, type Exercise } from './lib/exercises';
+import { applyAdaptiveSettings, calculateAdaptiveSettings, adaptExercise } from './lib/adaptiveDifficulty';
 
-export interface VocalRange {
-  lowMidi: number;
-  highMidi: number;
-  voiceType: string;
+// adaptExercise moved to lib/adaptiveDifficulty.ts
+
+// Tab Layout Component
+function TabBar() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const tabs = [
+    { path: '/', icon: Heart, label: 'หน้าหลัก' },
+    { path: '/profile', icon: User, label: 'โปรไฟล์' }
+  ];
+
+  // Don't show tab bar on specific routes
+  const hiddenRoutes = ['/session', '/range', '/exercise'];
+  if (hiddenRoutes.some(route => location.pathname.startsWith(route))) {
+    return null;
+  }
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 flex justify-center items-center z-50 h-[calc(80px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] pointer-events-none">
+      <div className="bg-white/90 backdrop-blur-xl border border-stone-200/50 shadow-xl shadow-stone-200/50 rounded-full flex items-center px-6 py-3 gap-8 pointer-events-auto mx-4 mb-4">
+        {tabs.map(tab => {
+          const Icon = tab.icon;
+          const isActive = location.pathname === tab.path;
+          return (
+            <button
+              key={tab.path}
+              onClick={() => navigate(tab.path)}
+              className={`flex flex-col items-center justify-center gap-1 transition-colors ${
+                isActive ? 'text-clay-dark' : 'text-taupe hover:text-clay'
+              }`}
+            >
+              <motion.div whileTap={{ scale: 0.9 }} animate={isActive ? { y: -2 } : { y: 0 }}>
+                <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+              </motion.div>
+              {isActive && <motion.div layoutId="tab-indicator" className="w-1.5 h-1.5 rounded-full bg-clay mt-0.5 absolute -bottom-3" />}
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
 }
 
-// สุ่มคีย์ให้เหมาะกับ range และไม่ซ้ำเดิม
-function adaptExercise(ex: Exercise, range: VocalRange): Exercise {
-  const exLow = Math.min(...ex.notes.map(n => n.midi));
-  const exHigh = Math.max(...ex.notes.map(n => n.midi));
-  const exSpan = exHigh - exLow;
+// Route Wrapper to handle exercise adaptation
+function ExerciseDetailWrapper() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const exerciseId = location.pathname.split('/').pop();
   
-  // คำนวณช่วงคีย์ที่เหมาะสม
-  const minRoot = range.lowMidi + 3;
-  let maxRoot = range.highMidi - exSpan - 2;
+  const { vocalRange } = useSettingsStore();
+  const { skillLevel, progress } = useProgressStore();
   
-  // ถ้าช่วงเสียงของผู้ใช้แคบกว่าความกว้างของแบบฝึกหัด จะทำให้ maxRoot < minRoot
-  // ในกรณีนี้ ให้ยึด minRoot เป็นหลัก เพื่อให้โน้ตต่ำสุดไม่ต่ำจนเกินไป
-  if (maxRoot < minRoot) {
-    maxRoot = minRoot;
+  const baseExercise = EXERCISES.find(e => e.id === exerciseId);
+
+  if (!baseExercise) return <Navigate to="/" />;
+
+  // Adapted logic
+  const effectiveRange = vocalRange || { lowMidi: 48, highMidi: 60, voiceType: 'ทั่วไป' };
+  let adapted = adaptExercise(baseExercise, effectiveRange);
+  
+  if (progress && skillLevel) {
+    const exerciseScore = progress.exerciseScores[baseExercise.id];
+    const recentScores = exerciseScore ? [exerciseScore.lastScore] : [];
+    const adaptiveSettings = calculateAdaptiveSettings(baseExercise.id, recentScores, skillLevel);
+    adapted = applyAdaptiveSettings(adapted, adaptiveSettings, effectiveRange);
   }
-  
-  // สุ่มคีย์ในช่วงที่เหมาะสม
-  const availableRange = Math.max(1, maxRoot - minRoot);
-  const randomOffset = Math.floor(Math.random() * Math.min(availableRange, 7)); // สุ่มไม่เกิน 7 semitones
-  const newRoot = Math.max(minRoot, Math.min(minRoot + randomOffset, maxRoot));
-  
-  const shift = newRoot - exLow;
-  
-  // สุ่ม BPM เล็กน้อย (±5%)
-  const bpmVariation = Math.floor(Math.random() * (ex.bpm * 0.1)) - (ex.bpm * 0.05);
-  const newBpm = Math.round(ex.bpm + bpmVariation);
-  
-  const newNotes: ExerciseNote[] = ex.notes.map(n => ({ ...n, midi: n.midi + shift }));
-  
-  return { 
-    ...ex, 
-    startingNote: ex.startingNote + shift, 
-    notes: newNotes,
-    bpm: newBpm
-  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 50 }}
+      className="fixed inset-0 z-[200] bg-sand overflow-y-auto"
+    >
+      <ExerciseDetail 
+        exercise={adapted} 
+        onClose={() => navigate(-1)} 
+        onStart={() => navigate(`/session/${adapted.id}`, { state: { adaptedExercise: adapted } })} 
+      />
+    </motion.div>
+  );
+}
+
+function PracticeSessionWrapper() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  // We pass the already adapted exercise via state so it doesn't change on render
+  const adaptedExercise = location.state?.adaptedExercise as Exercise | undefined;
+
+  if (!adaptedExercise) return <Navigate to="/" />;
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 1.05 }}
+      className="fixed inset-0 z-[300] bg-sand"
+    >
+      <PracticeView exercise={adaptedExercise} onBack={() => navigate(-1)} />
+    </motion.div>
+  );
 }
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('foryou');
-  const [view, setView] = useState<View>('tabs');
-  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
-  const [showTutorial, setShowTutorial] = useState(true);
-  const [skillLevel, setSkillLevel] = useState<SkillLevel | null>(() => {
-    try {
-      const saved = localStorage.getItem('skillLevel');
-      return saved ? (saved as SkillLevel) : null;
-    } catch { return null; }
-  });
-  const [hasCalibratedLatency, setHasCalibratedLatency] = useState(() => {
-    try {
-      return localStorage.getItem('hasCalibratedLatency') === 'true';
-    } catch { return false; }
-  });
-  const [hasCompletedVocalRange, setHasCompletedVocalRange] = useState(() => {
-    try {
-      return localStorage.getItem('hasCompletedVocalRange') === 'true';
-    } catch { return false; }
-  });
-  const [vocalRange, setVocalRange] = useState<VocalRange | null>(() => {
-    try {
-      const saved = localStorage.getItem('vocalRange');
-      return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
-  });
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Stores
+  const { hasSeenTutorial, completeTutorial, hasCalibratedLatency, setLatencySettings, hasCompletedVocalRange, vocalRange, setVocalRange, skipVocalRange } = useSettingsStore();
+  const { skillLevel, setSkillLevel, checkLevelUp, performLevelUp } = useProgressStore();
 
-  // Reset scroll position when changing tabs
+  // Level Up Modal State
+  const [showLevelUpModal, setShowLevelUpModal] = useState(false);
+  const [hasDismissedLevelUp, setHasDismissedLevelUp] = useState(false);
+  const lastPathRef = useRef(location.pathname);
+
+  // Scroll restoration
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [tab]);
+  }, [location.pathname]);
 
-  const saveSkillLevel = useCallback((level: SkillLevel) => {
-    setSkillLevel(level);
-    localStorage.setItem('skillLevel', level);
-  }, []);
+  // Track session navigation to reset dismissal state
+  useEffect(() => {
+    if (lastPathRef.current.startsWith('/session') && location.pathname === '/') {
+      setHasDismissedLevelUp(false);
+    }
+    lastPathRef.current = location.pathname;
+  }, [location.pathname]);
 
-  const saveRange = useCallback((range: VocalRange) => {
-    setVocalRange(range);
-    localStorage.setItem('vocalRange', JSON.stringify(range));
-  }, []);
+  // Level Up Check - Fixed: Use modal instead of window.confirm, restrict path and respect dismissal state
+  useEffect(() => {
+    if (location.pathname === '/' && checkLevelUp() && skillLevel && skillLevel !== 'advanced' && !hasDismissedLevelUp) {
+      setShowLevelUpModal(true);
+    }
+  }, [location.pathname, checkLevelUp, skillLevel, hasDismissedLevelUp]);
 
-  // Filter exercises based on skill level
+  // Filter exercises
   const filteredExercises = skillLevel 
     ? EXERCISES.filter(ex => {
-        if (!ex.difficulty) return true; // Show exercises without difficulty
+        if (!ex.difficulty) return true;
         if (skillLevel === 'beginner') return ex.difficulty === 'beginner';
         if (skillLevel === 'intermediate') return ex.difficulty === 'beginner' || ex.difficulty === 'intermediate';
-        return true; // advanced shows all
+        return true;
       })
     : EXERCISES;
 
-  const openExercise = (ex: Exercise) => {
-    // ถ้าผู้ใช้ยังไม่เคยวัดเสียง (vocalRange เป็น null)
-    // ให้ใช้ Safe Default Range (C3 ถึง C4) เพื่อความปลอดภัยและร้องสบาย
-    const effectiveRange = vocalRange || { lowMidi: 48, highMidi: 60, voiceType: 'General' };
-    const adapted = adaptExercise(ex, effectiveRange);
-    setSelectedExercise(adapted);
-    setView('detail');
-  };
-
-  const startPractice = () => setView('practice');
-  const goHome = () => { setView('tabs'); setSelectedExercise(null); };
-
-  // Show tutorial first (if not seen before)
-  if (showTutorial) {
-    return <TutorialOverlay onComplete={() => setShowTutorial(false)} />;
+  // Global Onboarding Flow
+  if (!hasSeenTutorial) {
+    return <TutorialOverlay onComplete={completeTutorial} />;
   }
 
-  // Show onboarding if no skill level set
   if (!skillLevel) {
-    return <SkillLevelOnboarding onComplete={saveSkillLevel} />;
+    return <SkillLevelOnboarding onComplete={setSkillLevel} />;
   }
 
-  // Show calibration test if not done before
   if (!hasCalibratedLatency) {
     return (
-      <div className="app view-transition">
-        <LatencyCalibrationTest 
-          isOnboarding={true}
-          currentSettings={loadLatencySettings()}
-          onComplete={(newSettings) => {
-            saveLatencySettings(newSettings);
-            localStorage.setItem('hasCalibratedLatency', 'true');
-            setHasCalibratedLatency(true);
-          }}
-          onCancel={() => {
-            // Even if cancelled, we don't force them forever.
-            localStorage.setItem('hasCalibratedLatency', 'true');
-            setHasCalibratedLatency(true);
-          }}
-        />
-      </div>
+      <LatencyCalibrationTest 
+        isOnboarding={true}
+        currentSettings={useSettingsStore.getState().latencySettings}
+        onComplete={(newSettings) => setLatencySettings(newSettings)}
+        onCancel={() => useSettingsStore.getState().skipLatencyCalibration()}
+      />
     );
   }
 
-  // Show vocal range check if not done before
   if (!vocalRange && !hasCompletedVocalRange) {
     return (
-      <div className="app view-transition">
-        <VocalRangeView 
-          onSave={(range) => {
-            saveRange(range);
-            localStorage.setItem('hasCompletedVocalRange', 'true');
-            setHasCompletedVocalRange(true);
-          }} 
-          onBack={() => {}} // not used in onboarding
-          isOnboarding={true}
-          onSkip={() => {
-            localStorage.setItem('hasCompletedVocalRange', 'true');
-            setHasCompletedVocalRange(true);
-          }}
-        />
-      </div>
-    );
-  }
-
-  if (view === 'detail' && selectedExercise) {
-    return (
-      <div className="app view-transition">
-        <ExerciseDetail exercise={selectedExercise} onClose={goHome} onStart={startPractice} />
-      </div>
-    );
-  }
-  if (view === 'practice' && selectedExercise) {
-    return (
-      <div className="app view-transition">
-        <PracticeView exercise={selectedExercise} onBack={() => setView('detail')} />
-      </div>
-    );
-  }
-  if (view === 'range') {
-    return (
-      <div className="app view-transition">
-        <VocalRangeView onBack={goHome} onSave={saveRange} />
-      </div>
+      <VocalRangeView 
+        onSave={setVocalRange} 
+        onBack={() => {}} 
+        isOnboarding={true}
+        onSkip={skipVocalRange}
+      />
     );
   }
 
   return (
-    <div className="app" style={{
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      width: '100%',
-      overflow: 'hidden'
-    }}>
-      <div className="tab-content view-transition" key={tab} style={{ 
-        flex: 1,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        WebkitOverflowScrolling: 'touch'
-      }}>
-        {tab === 'foryou' && (
-          <ForYouView
-            exercises={filteredExercises}
-            vocalRange={vocalRange}
-            onSelect={openExercise}
-            onRange={() => setView('range')}
-            skillLevel={skillLevel}
-          />
-        )}
-        {tab === 'exercises' && (
-          <ExercisesView
-            exercises={filteredExercises}
-            vocalRange={vocalRange}
-            onSelect={openExercise}
-            onRange={() => setView('range')}
-            skillLevel={skillLevel}
-          />
-        )}
-        {tab === 'theory' && (
-          <TheoryView />
-        )}
-        {tab === 'profile' && (
-          <ProfileView 
-            vocalRange={vocalRange} 
-            skillLevel={skillLevel}
-            onChangeSkillLevel={() => {
-              localStorage.removeItem('skillLevel');
-              setSkillLevel(null);
+    <div className="flex flex-col h-[100dvh] w-full overflow-hidden bg-sand text-charcoal font-sans relative">
+      <main className="flex-1 relative w-full h-full">
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname.split('/')[1]}>
+            <Route path="/" element={
+              <motion.div className="absolute inset-0 overflow-y-auto" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+                <HomeView exercises={filteredExercises} onSelect={(ex) => navigate(`/exercise/${ex.id}`)} skillLevel={skillLevel} />
+              </motion.div>
+            } />
+            <Route path="/practice" element={
+              <motion.div className="absolute inset-0 overflow-y-auto" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+                <HomeView exercises={filteredExercises} onSelect={(ex) => navigate(`/exercise/${ex.id}`)} skillLevel={skillLevel} />
+              </motion.div>
+            } />
+            <Route path="/profile" element={
+              <motion.div className="absolute inset-0 overflow-y-auto" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+                <ProfileView vocalRange={vocalRange} skillLevel={skillLevel} onChangeSkillLevel={() => setSkillLevel(null)} />
+              </motion.div>
+            } />
+            <Route path="/exercise/:id" element={<ExerciseDetailWrapper />} />
+            <Route path="/session/:id" element={<PracticeSessionWrapper />} />
+            <Route path="/range" element={
+              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="fixed inset-0 z-[100] bg-sand">
+                 <VocalRangeView onBack={() => window.history.back()} onSave={setVocalRange} />
+              </motion.div>
+            } />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AnimatePresence>
+      </main>
+      <TabBar />
+      
+      {/* Level Up Modal - Fixed: Replace window.confirm with proper modal */}
+      <AnimatePresence>
+        {showLevelUpModal && skillLevel && skillLevel !== 'advanced' && (
+          <LevelUpModal
+            currentLevel={skillLevel}
+            onConfirm={() => {
+              performLevelUp();
+              setShowLevelUpModal(false);
+              setHasDismissedLevelUp(false);
+            }}
+            onCancel={() => {
+              setShowLevelUpModal(false);
+              setHasDismissedLevelUp(true);
             }}
           />
         )}
-      </div>
-
-      <nav className="tab-bar">
-        <button className={`tab-item ${tab === 'foryou' ? 'active' : ''}`} onClick={() => setTab('foryou')}>
-          <span className="tab-icon"><IconHeart size={26} /></span>
-        </button>
-        <button className={`tab-item ${tab === 'exercises' ? 'active' : ''}`} onClick={() => setTab('exercises')}>
-          <span className="tab-icon"><IconMusic size={26} /></span>
-        </button>
-        <button className={`tab-item ${tab === 'theory' ? 'active' : ''}`} onClick={() => setTab('theory')}>
-          <span className="tab-icon"><IconBookOpen size={26} /></span>
-        </button>
-        <button className={`tab-item ${tab === 'profile' ? 'active' : ''}`} onClick={() => setTab('profile')}>
-          <span className="tab-icon"><IconUser size={26} /></span>
-        </button>
-      </nav>
+      </AnimatePresence>
     </div>
   );
 }

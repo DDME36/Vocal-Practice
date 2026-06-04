@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Volume2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Volume2, CheckCircle, AlertCircle, Info, ChevronRight, X, Mic } from 'lucide-react';
 import { AudioEngine } from '../lib/audioEngine';
 import { 
   adjustManualOffset, 
   type LatencySettings 
 } from '../lib/latencyCalibration';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface Props {
   currentSettings: LatencySettings;
@@ -186,512 +187,288 @@ export default function LatencyCalibrationTest({ currentSettings, onComplete, on
     : 0;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: '#fafbfc',
-      zIndex: 10000,
-      display: 'flex',
-      flexDirection: 'column',
-      animation: 'fadeIn 0.3s ease'
-    }}>
+    <div className="fixed inset-0 bg-sand z-[10000] flex flex-col select-none overflow-hidden animate-in fade-in duration-300">
       {/* Background decoration */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'radial-gradient(circle at 20% 30%, rgba(199, 210, 254, 0.08) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(252, 231, 243, 0.08) 0%, transparent 50%)',
-        zIndex: -1,
-        pointerEvents: 'none'
-      }} />
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute top-[20%] left-[5%] w-[300px] h-[300px] rounded-full bg-clay-light/5 blur-[80px]" />
+        <div className="absolute bottom-[20%] right-[5%] w-[350px] h-[350px] rounded-full bg-sage-light/5 blur-[90px]" />
+      </div>
 
       {/* Header */}
-      <div style={{
-        padding: '20px',
-        borderBottom: '1px solid var(--border)',
-        background: 'white',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>
-          ทดสอบความล่าช้าเสียง
+      <header className="relative z-10 px-6 py-5 bg-white/80 backdrop-blur-md border-b border-stone-200/50 flex justify-between items-center pt-[calc(20px+env(safe-area-inset-top,0px))]">
+        <h2 className="text-xl font-black text-charcoal">
+          ทดสอบระดับเสียงไมค์และดีเลย์
         </h2>
         <button
           onClick={onCancel}
-          style={isOnboarding ? {
-            padding: '8px 16px',
-            borderRadius: 20,
-            border: 'none',
-            background: 'rgba(15, 23, 42, 0.05)',
-            color: 'var(--text2)',
-            cursor: 'pointer',
-            fontSize: 14,
-            fontWeight: 600
-          } : {
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            border: '1px solid var(--border)',
-            background: 'white',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 20
-          }}
+          className={`cursor-pointer transition-all active:scale-95 flex items-center justify-center ${
+            isOnboarding
+              ? 'px-5 py-2.5 rounded-full bg-sand-dark text-taupe font-bold text-xs hover:bg-stone-200/80 border border-stone-200/30'
+              : 'w-10 h-10 rounded-full border border-stone-200 bg-white hover:bg-stone-50 text-charcoal'
+          }`}
         >
-          {isOnboarding ? 'ข้ามการทดสอบ' : '✕'}
+          {isOnboarding ? 'ข้ามขั้นตอน' : <X size={18} />}
         </button>
-      </div>
+      </header>
 
-      {/* Content */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: '40px 20px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        {step === 'intro' && (
-          <div style={{ maxWidth: 400, textAlign: 'center' }}>
-            <div style={{
-              width: 100,
-              height: 100,
-              margin: '0 auto 30px',
-              background: 'linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)',
-              borderRadius: 50,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white'
-            }}>
-              <Volume2 size={48} />
-            </div>
-
-            <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: 'var(--text)' }}>
-              {isOnboarding ? 'เตรียมความพร้อมอุปกรณ์' : 'วิธีการทดสอบ'}
-            </h3>
-            {isOnboarding && (
-              <p style={{ color: 'var(--text2)', marginBottom: 24, lineHeight: 1.5, fontSize: 15 }}>
-                เพื่อให้การประเมินระดับเสียงร้องแม่นยำที่สุด<br />เราจำเป็นต้องทดสอบความล่าช้าของไมโครโฟนคุณ
-              </p>
-            )}
-            {!isOnboarding && <div style={{height: 16}}></div>}
-            
-            <div style={{
-              textAlign: 'left',
-              background: 'white',
-              padding: 20,
-              borderRadius: 16,
-              border: '1px solid var(--border)',
-              marginBottom: 30
-            }}>
-              <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 2, color: 'var(--text2)' }}>
-                <li>เมื่อได้ยินเสียง "บี๊บ" ให้ร้องตาม</li>
-                <li>ร้องเสียง "อา" หรือ "อี" ตามเสียงที่ได้ยิน</li>
-                <li>ทำซ้ำ {TOTAL_TESTS} ครั้ง</li>
-                <li>ระบบจะคำนวณค่าที่เหมาะสมให้</li>
-              </ol>
-            </div>
-
-            <button
-              onClick={startTest}
-              style={{
-                width: '100%',
-                padding: 16,
-                background: '#a78bfa',
-                color: 'white',
-                border: 'none',
-                borderRadius: 12,
-                fontSize: 16,
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 4px 16px rgba(167, 139, 250, 0.3)'
-              }}
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto px-6 py-10 flex flex-col items-center justify-center relative z-10">
+        <AnimatePresence mode="wait">
+          
+          {/* STEP 1: INTRO */}
+          {step === 'intro' && (
+            <motion.div
+              key="intro"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="max-w-sm w-full text-center flex flex-col items-center"
             >
-              เริ่มทดสอบ
-            </button>
-          </div>
-        )}
-
-        {step === 'testing' && (
-          <div style={{ maxWidth: 400, textAlign: 'center', width: '100%' }}>
-            <div style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: 'var(--text2)',
-              marginBottom: 20
-            }}>
-              ครั้งที่ {currentTest + 1} / {TOTAL_TESTS}
-            </div>
-
-            {countdown !== null ? (
-              <div style={{
-                width: 200,
-                height: 200,
-                margin: '0 auto',
-                background: 'white',
-                borderRadius: 100,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 80,
-                fontWeight: 900,
-                color: '#a78bfa',
-                border: '4px solid var(--border)',
-                boxShadow: '0 8px 24px rgba(15, 23, 42, 0.1)'
-              }}>
-                {countdown}
+              <div className="w-24 h-24 mb-8 bg-gradient-to-br from-[#e9dfce] to-sand-dark rounded-[2.2rem] flex items-center justify-center text-clay-dark shadow-sm border border-white">
+                <Volume2 size={36} />
               </div>
-            ) : (
-              <div style={{
-                width: 200,
-                height: 200,
-                margin: '0 auto',
-                background: isListening ? 'linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)' : 'white',
-                borderRadius: 100,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '4px solid var(--border)',
-                boxShadow: isListening ? '0 0 40px rgba(167, 139, 250, 0.5)' : '0 8px 24px rgba(15, 23, 42, 0.1)',
-                animation: isListening ? 'pulse 1s ease-in-out infinite' : 'none',
-                color: isListening ? 'white' : '#a78bfa'
-              }}>
-                <Volume2 size={80} />
-              </div>
-            )}
 
-            <div style={{
-              marginTop: 30,
-              fontSize: 18,
-              fontWeight: 700,
-              color: 'var(--text)'
-            }}>
-              {countdown !== null && 'เตรียมตัว...'}
-              {countdown === null && !isListening && 'กำลังเล่นเสียง...'}
-              {isListening && 'ร้องตามเสียงที่ได้ยิน!'}
-            </div>
-
-            {/* Progress bar */}
-            <div style={{
-              width: '100%',
-              height: 8,
-              background: 'var(--bg-secondary)',
-              borderRadius: 4,
-              marginTop: 30,
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                width: `${((currentTest + 1) / TOTAL_TESTS) * 100}%`,
-                height: '100%',
-                background: '#a78bfa',
-                transition: 'width 0.3s ease'
-              }} />
-            </div>
-          </div>
-        )}
-
-        {step === 'results' && (
-          <div style={{ maxWidth: 500, width: '100%' }}>
-            <div style={{
-              textAlign: 'center',
-              marginBottom: 30
-            }}>
-              <div style={{
-                width: 80,
-                height: 80,
-                margin: '0 auto 20px',
-                background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
-                borderRadius: 40,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white'
-              }}>
-                <CheckCircle size={40} />
-              </div>
-              <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>
-                ทดสอบเสร็จสิ้น!
+              <h3 className="text-2xl font-black text-charcoal mb-3">
+                {isOnboarding ? 'ปรับค่าความล่าช้าเสียง' : 'การชดเชยดีเลย์ไมโครโฟน'}
               </h3>
-              <p style={{ color: 'var(--text2)', margin: 0 }}>
-                ระบบวิเคราะห์ความล่าช้าของคุณแล้ว
+              <p className="text-sm font-medium text-taupe leading-relaxed mb-8">
+                เพื่อให้ระบบวิเคราะห์ระดับเสียงของคุณตรงจังหวะแบบเรียลไทม์ได้อย่างสมบูรณ์แบบ เราจำเป็นต้องวัดดีเลย์ของไมโครโฟน
               </p>
-            </div>
-
-            {/* Results */}
-            <div style={{
-              background: 'white',
-              padding: 24,
-              borderRadius: 16,
-              border: '1px solid var(--border)',
-              marginBottom: 20
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: 16,
-                paddingBottom: 16,
-                borderBottom: '1px solid var(--border)'
-              }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text2)' }}>
-                  ความล่าช้าเฉลี่ย
-                </span>
-                <span style={{ fontSize: 24, fontWeight: 900, color: '#a78bfa' }}>
-                  {Math.round(avgLatency)}ms
-                </span>
+              
+              <div className="w-full text-left bg-white rounded-3xl p-6 border border-stone-200/50 shadow-sm mb-8">
+                <div className="text-xs font-bold uppercase tracking-widest text-clay mb-3 flex items-center gap-2">
+                  <Info size={14} /> วิธีการทดสอบ:
+                </div>
+                <ol className="space-y-3.5 text-sm font-semibold text-charcoal/80">
+                  <li className="flex items-start gap-3">
+                    <span className="w-5 h-5 rounded-full bg-sand-dark flex items-center justify-center text-xs text-charcoal shrink-0 mt-0.5">1</span>
+                    <span>เมื่อได้ยินเสียงสัญญาณให้เริ่มร้องตามทันที</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="w-5 h-5 rounded-full bg-sand-dark flex items-center justify-center text-xs text-charcoal shrink-0 mt-0.5">2</span>
+                    <span>ร้องออกเสียง "อา" หรือ "อี" ล็อคเสียงให้นิ่ง</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="w-5 h-5 rounded-full bg-sand-dark flex items-center justify-center text-xs text-charcoal shrink-0 mt-0.5">3</span>
+                    <span>ทำซ้ำทั้งหมด {TOTAL_TESTS} ครั้งเพื่อความแม่นยำ</span>
+                  </li>
+                </ol>
               </div>
 
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: 16
-              }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text2)' }}>
-                  ค่าชดเชยปัจจุบัน
-                </span>
-                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
-                  {currentSettings.totalCompensation}ms
-                </span>
+              <button
+                onClick={startTest}
+                className="w-full bg-charcoal text-white hover:bg-clay py-5 rounded-full font-black text-lg flex items-center justify-center gap-2 shadow-lg shadow-charcoal/10 hover:shadow-clay/20 active:scale-[0.98] transition-all cursor-pointer"
+              >
+                เริ่มทดสอบดีเลย์ <ChevronRight size={20} />
+              </button>
+            </motion.div>
+          )}
+
+          {/* STEP 2: TESTING PROGRESS */}
+          {step === 'testing' && (
+            <motion.div
+              key="testing"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.04 }}
+              className="max-w-xs w-full text-center flex flex-col items-center"
+            >
+              <div className="text-xs font-bold uppercase tracking-widest text-taupe mb-6">
+                บทวิเคราะห์ดีเลย์ ครั้งที่ {currentTest + 1} จาก {TOTAL_TESTS}
               </div>
 
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text2)' }}>
-                  ค่าที่แนะนำ
-                </span>
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#10b981' }}>
-                  {currentSettings.totalCompensation + calculateRecommendedOffset()}ms
-                  <span style={{ fontSize: 12, color: 'var(--text2)', marginLeft: 8 }}>
+              <div className="w-56 h-56 mx-auto mb-10 flex items-center justify-center relative">
+                {/* Decorative pulse ring when listening */}
+                {isListening && (
+                  <div className="absolute inset-0 rounded-full bg-clay-light/20 border-2 border-clay/40 animate-ping" />
+                )}
+
+                <div className={`w-48 h-48 rounded-full border-4 flex items-center justify-center text-6xl font-black transition-all shadow-xl z-10 ${
+                  isListening 
+                    ? 'bg-gradient-to-br from-clay to-clay-light border-white text-white' 
+                    : countdown !== null 
+                    ? 'bg-white border-clay text-clay' 
+                    : 'bg-white border-stone-200 text-taupe'
+                }`}>
+                  {countdown !== null ? (
+                    countdown
+                  ) : isListening ? (
+                    <Mic size={56} className="animate-pulse" />
+                  ) : (
+                    <Volume2 size={56} />
+                  )}
+                </div>
+              </div>
+
+              <div className="text-lg font-black text-charcoal mb-8 h-8">
+                {countdown !== null && 'เตรียมตัว...'}
+                {countdown === null && !isListening && 'กำลังเล่นเสียงอ้างอิง...'}
+                {isListening && 'กรุณาร้องออกเสียงตามตัวโน้ต!'}
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-full h-2.5 bg-sand-dark rounded-full overflow-hidden border border-stone-200/30">
+                <div 
+                  className="h-full bg-clay transition-all duration-300 ease-out"
+                  style={{ width: `${((currentTest) / TOTAL_TESTS) * 100}%` }}
+                />
+              </div>
+            </motion.div>
+          )}
+
+          {/* STEP 3: RESULTS REPORT */}
+          {step === 'results' && (
+            <motion.div
+              key="results"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-md w-full flex flex-col"
+            >
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 mx-auto mb-5 bg-gradient-to-br from-sage-light to-sage-dark rounded-[2rem] flex items-center justify-center text-white shadow-xl shadow-sage/20 border-2 border-white">
+                  <CheckCircle size={32} />
+                </div>
+                <h3 className="text-2xl font-black text-charcoal mb-2">
+                  วิเคราะห์ผลทดสอบเสร็จสมบูรณ์!
+                </h3>
+                <p className="text-sm font-medium text-taupe">
+                  ระบบได้กำหนดค่าความล่าช้าชดเชยที่สมบูรณ์แบบให้กับคุณแล้ว
+                </p>
+              </div>
+
+              {/* Bento Grid Results Card */}
+              <div className="bg-white rounded-3xl p-6 border border-stone-200/50 shadow-sm mb-5 space-y-4">
+                <div className="flex justify-between items-center pb-4 border-b border-stone-100">
+                  <span className="text-sm font-bold text-taupe uppercase tracking-wider">
+                    ดีเลย์ไมโครโฟนเฉลี่ย
+                  </span>
+                  <span className="text-3xl font-black text-clay">
+                    {Math.round(avgLatency)}ms
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center text-sm font-semibold">
+                  <span className="text-taupe">ค่าชดเชยดีเลย์ของเดิม</span>
+                  <span className="text-charcoal">{currentSettings.totalCompensation}ms</span>
+                </div>
+
+                <div className="flex justify-between items-center text-sm font-semibold">
+                  <span className="text-taupe">ชดเชยใหม่แนะนำ (ชดเชยจริง)</span>
+                  <span className="text-sage-dark bg-sage-light/20 px-3 py-1 rounded-full text-xs font-bold">
+                    {currentSettings.totalCompensation + calculateRecommendedOffset()}ms 
                     ({calculateRecommendedOffset() > 0 ? '+' : ''}{calculateRecommendedOffset()}ms)
                   </span>
-                </span>
+                </div>
               </div>
-            </div>
 
-            {/* Individual results */}
-            <div style={{
-              background: 'white',
-              padding: 20,
-              borderRadius: 16,
-              border: '1px solid var(--border)',
-              marginBottom: 20
-            }}>
-              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: 'var(--text)' }}>
-                ผลการทดสอบแต่ละครั้ง
+              {/* Individual list details */}
+              <div className="bg-white rounded-3xl p-5 border border-stone-200/50 shadow-sm mb-5">
+                <div className="text-xs font-bold uppercase tracking-widest text-charcoal mb-3">
+                  ผลลัพธ์การวัดทั้ง {TOTAL_TESTS} ครั้ง
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {testResults.map((result, index) => (
+                    <div key={index} className="bg-sand p-2.5 rounded-xl border border-stone-200/30 text-center flex flex-col justify-center gap-1">
+                      <div className="text-[10px] font-bold text-taupe">ครั้งที่ {index + 1}</div>
+                      <div className="text-sm font-black text-charcoal">{Math.round(result.difference)}ms</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              {testResults.map((result, index) => (
-                <div
-                  key={index}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    padding: '8px 0',
-                    borderBottom: index < testResults.length - 1 ? '1px solid var(--border-light)' : 'none'
-                  }}
+
+              {/* Info caution for large offset */}
+              {Math.abs(calculateRecommendedOffset()) > 20 && (
+                <div className="bg-ochre-light/10 border border-ochre/30 rounded-2.5xl p-4 mb-6 flex gap-3 text-left">
+                  <AlertCircle size={20} className="text-ochre shrink-0 mt-0.5" />
+                  <div className="text-xs font-semibold text-ochre-dark leading-relaxed">
+                    ระบบพบดีเลย์ที่แกว่งมากกว่าเกณฑ์ปกติเล็กน้อย แนะนำให้กดใช้ค่าที่ประมวลผลแนะนำนี้เพื่อให้การวิเคราะห์ตรงท่อนโน้ตพอดี
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-4">
+                <button
+                  onClick={onCancel}
+                  className="flex-1 py-4.5 bg-white border border-stone-200 font-bold text-charcoal rounded-full active:scale-95 transition-all cursor-pointer text-center text-sm"
                 >
-                  <span style={{ fontSize: 13, color: 'var(--text2)' }}>
-                    ครั้งที่ {index + 1}
-                  </span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-                    {Math.round(result.difference)}ms
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Info box */}
-            {Math.abs(calculateRecommendedOffset()) > 20 && (
-              <div style={{
-                background: 'rgba(251, 191, 36, 0.1)',
-                border: '1px solid rgba(251, 191, 36, 0.3)',
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 20,
-                display: 'flex',
-                gap: 12
-              }}>
-                <AlertCircle size={20} color="#fbbf24" style={{ flexShrink: 0, marginTop: 2 }} />
-                <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>
-                  ระบบตรวจพบความล่าช้าที่แตกต่างจากค่าปัจจุบัน แนะนำให้ใช้ค่าที่แนะนำเพื่อความแม่นยำที่ดีขึ้น
-                </div>
+                  {isOnboarding ? 'ข้ามขั้นตอนนี้' : 'ยกเลิก'}
+                </button>
+                <button
+                  onClick={applyRecommendedSettings}
+                  className="flex-[2] py-4.5 bg-charcoal text-white hover:bg-clay font-black rounded-full shadow-lg shadow-charcoal/10 hover:shadow-clay/20 active:scale-95 transition-all cursor-pointer text-center text-sm"
+                >
+                  {isOnboarding ? 'ใช้ค่านี้ & เริ่มต้นใช้งาน' : 'ยอมรับและบันทึกค่าชดเชย'}
+                </button>
               </div>
-            )}
+            </motion.div>
+          )}
 
-            {/* Buttons */}
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button
-                onClick={onCancel}
-                style={{
-                  flex: 1,
-                  padding: 16,
-                  background: 'white',
-                  border: '2px solid var(--border)',
-                  borderRadius: 12,
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: 'var(--text2)',
-                  cursor: 'pointer'
-                }}
-              >
-                {isOnboarding ? 'ข้าม' : 'ยกเลิก'}
-              </button>
-              <button
-                onClick={applyRecommendedSettings}
-                style={{
-                  flex: 2,
-                  padding: 16,
-                  background: '#a78bfa',
-                  border: 'none',
-                  borderRadius: 12,
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: 'white',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 16px rgba(167, 139, 250, 0.3)'
-                }}
-              >
-                {isOnboarding ? 'เริ่มต้นใช้งาน' : 'ใช้ค่าที่แนะนำ'}
-              </button>
-            </div>
-          </div>
-        )}
+        </AnimatePresence>
       </div>
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-      `}</style>
-
-      {/* Error Modal */}
-      {showErrorModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(15, 23, 42, 0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10001,
-          padding: 20
-        }}>
-          <div style={{
-            background: 'white',
-            borderRadius: 20,
-            padding: 30,
-            maxWidth: 400,
-            width: '100%',
-            boxShadow: '0 20px 60px rgba(15, 23, 42, 0.3)'
-          }}>
-            <div style={{
-              width: 60,
-              height: 60,
-              margin: '0 auto 20px',
-              background: 'rgba(239, 68, 68, 0.1)',
-              borderRadius: 30,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ef4444'
-            }}>
-              <AlertCircle size={32} />
-            </div>
-            
-            <h3 style={{
-              fontSize: 20,
-              fontWeight: 800,
-              textAlign: 'center',
-              marginBottom: 12,
-              color: 'var(--text)'
-            }}>
-              {step === 'intro' ? 'ไม่สามารถเข้าถึงไมค์' : 'ไม่ตรวจพบเสียง'}
-            </h3>
-            
-            <p style={{
-              fontSize: 14,
-              color: 'var(--text2)',
-              textAlign: 'center',
-              lineHeight: 1.6,
-              marginBottom: 24
-            }}>
-              {step === 'intro' 
-                ? 'กรุณาอนุญาตการใช้งานไมค์ในเบราว์เซอร์ของคุณ'
-                : 'กรุณาร้องเสียง "อา" หรือ "อี" ให้ดังขึ้น หรือเข้าใกล้ไมค์มากขึ้น'
-              }
-            </p>
-            
-            <div style={{ display: 'flex', gap: 12 }}>
-              {step === 'testing' && (
+      {/* Error / Noise warning Modal */}
+      <AnimatePresence>
+        {showErrorModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[10001] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl text-center flex flex-col items-center"
+            >
+              <div className="w-16 h-16 mb-5 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center">
+                <AlertCircle size={28} />
+              </div>
+              
+              <h3 className="text-xl font-black text-charcoal mb-2">
+                {step === 'intro' ? 'ไม่สามารถเชื่อมไมโครโฟน' : 'ตรวจหาเสียงสัญญาณไม่พบ'}
+              </h3>
+              
+              <p className="text-sm font-medium text-taupe leading-relaxed mb-6">
+                {step === 'intro' 
+                  ? 'กรุณาอนุญาตการเข้าใช้งานสิทธิ์ไมโครโฟนในเบราว์เซอร์ของท่านแล้วกดลองใหม่อีกครั้ง'
+                  : 'กรุณาร้องออกเสียง "อา" หรือ "อี" ให้ชัดเจนขึ้นและเข้ามาใกล้ๆ ไมโครโฟนอุปกรณ์'
+                }
+              </p>
+              
+              <div className="flex gap-3 w-full">
+                {step === 'testing' && (
+                  <button
+                    onClick={() => {
+                      setShowErrorModal(false);
+                      runSingleTest();
+                    }}
+                    className="flex-1 py-3 bg-clay text-white font-bold rounded-2xl active:scale-95 shadow-md shadow-clay/10 transition-all cursor-pointer text-sm"
+                  >
+                    ลองใหม่อีกครั้ง
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setShowErrorModal(false);
-                    runSingleTest();
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: 14,
-                    background: '#a78bfa',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 12,
-                    fontSize: 15,
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  ลองอีกครั้ง
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  setShowErrorModal(false);
-                  if (step === 'intro') {
-                    // Already on intro, just close modal
-                  } else {
-                    // Go back to intro
-                    if (engineRef.current) {
-                      engineRef.current.stop();
-                      engineRef.current = null;
+                    if (step !== 'intro') {
+                      if (engineRef.current) {
+                        engineRef.current.stop();
+                        engineRef.current = null;
+                      }
+                      setStep('intro');
                     }
-                    setStep('intro');
-                  }
-                }}
-                style={{
-                  flex: 1,
-                  padding: 14,
-                  background: 'white',
-                  color: 'var(--text2)',
-                  border: '2px solid var(--border)',
-                  borderRadius: 12,
-                  fontSize: 15,
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                {step === 'intro' ? 'ตกลง' : 'ยกเลิก'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                  }}
+                  className="flex-1 py-3 bg-stone-100 font-bold text-charcoal rounded-2xl active:scale-95 hover:bg-stone-200 transition-colors cursor-pointer text-sm"
+                >
+                  {step === 'intro' ? 'ตกลง' : 'ยกเลิก'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

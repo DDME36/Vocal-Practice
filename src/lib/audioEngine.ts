@@ -1,4 +1,5 @@
 import { detectPitch } from './pitchDetection';
+import { setupIOSAudioSession, resetIOSAudioSession } from './iosAudioFix';
 
 export class AudioEngine {
   private audioContext: AudioContext | null = null;
@@ -44,13 +45,8 @@ export class AudioEngine {
       }
     }
 
-    // iOS Safari Fix: Reset audio session before requesting mic
-    // This helps prevent iOS from getting stuck in a bad routing state
-    if ('audioSession' in navigator) {
-      try {
-        (navigator as any).audioSession.type = 'auto';
-      } catch (e) { /* ignore */ }
-    }
+    // iOS Safari Fix: Setup audio session for proper speaker output
+    setupIOSAudioSession();
     
     // Request microphone permission first
     this.mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -63,18 +59,6 @@ export class AudioEngine {
         channelCount: 1
       },
     });
-
-    // iOS Safari Fix: Force 'play-and-record' type after mic is active
-    // This tells iOS to output sound to the Loudspeaker rather than the Earpiece
-    // Note: We use raw audio constraints (echoCancellation: false) above 
-    // to preserve pitch detection, which makes the recording sound like Voice Memos.
-    if ('audioSession' in navigator) {
-      try {
-        (navigator as any).audioSession.type = 'play-and-record';
-      } catch (e) {
-        console.warn('AudioSession API not supported', e);
-      }
-    }
     
     // Ensure we have a context at this point
     if (!this.audioContext) {
@@ -89,6 +73,18 @@ export class AudioEngine {
       } catch (e) {
         console.warn('Failed to resume AudioContext:', e);
       }
+    }
+    
+    // iOS PWA Fix: Play silent sound to unlock audio output
+    // This is critical for PWA to work properly on iOS
+    try {
+      const silentBuffer = this.audioContext.createBuffer(1, 1, 22050);
+      const silentSource = this.audioContext.createBufferSource();
+      silentSource.buffer = silentBuffer;
+      silentSource.connect(this.audioContext.destination);
+      silentSource.start(0);
+    } catch (e) {
+      console.warn('Failed to play silent sound:', e);
     }
     
     this.analyser = this.audioContext.createAnalyser();
@@ -155,14 +151,26 @@ export class AudioEngine {
   };
 
   /** Play reference tone - optimized for vocal training */
-  async playTone(frequency: number, durationMs: number = 500, _syllable?: string) {
+  async playTone(frequency: number, durationMs: number = 500, _syllable?: string, timeOffsetSec: number = 0, _enableSpeech: boolean = false) {
     // ใช้ playbackContext แยกจาก audioContext (ไม่ต้องขอไมค์)
     let context = this.playbackContext;
     
     if (!context) {
       // สร้าง AudioContext ใหม่สำหรับเล่นเสียงเท่านั้น (ไม่ต้องขอไมค์)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       context = new (window.AudioContext || (window as any).webkitAudioContext)();
       this.playbackContext = context;
+      
+      // iOS PWA Fix: Play silent sound immediately to unlock audio
+      try {
+        const silentBuffer = context.createBuffer(1, 1, 22050);
+        const silentSource = context.createBufferSource();
+        silentSource.buffer = silentBuffer;
+        silentSource.connect(context.destination);
+        silentSource.start(0);
+      } catch (e) {
+        console.warn('Failed to unlock audio:', e);
+      }
     }
     
     // iOS: Resume AudioContext if suspended
@@ -177,52 +185,67 @@ export class AudioEngine {
     
     if (context.state === 'closed') return;
     
-    const t = context.currentTime;
+    const t = context.currentTime + timeOffsetSec;
     const dur = durationMs / 1000;
 
-    // Master gain with smooth envelope
-    const masterGain = context.createGain();
-    masterGain.gain.setValueAtTime(0, t);
-    masterGain.gain.linearRampToValueAtTime(0.25, t + 0.02); // Quick attack
-    masterGain.gain.setValueAtTime(0.25, t + dur - 0.05); // Sustain
-    masterGain.gain.linearRampToValueAtTime(0, t + dur); // Quick release
+    // Web Speech API has been disabled per user request
+    // Speech synthesis is no longer used in this application
 
-    // Warm filter for smooth sound
+    // Master gain with smooth electric piano/vocal guide envelope
+    const masterGain = context.createGain();
+    masterGain.gain.setValueAtTime(0, Math.max(0, t));
+    masterGain.gain.linearRampToValueAtTime(0.4, Math.max(0, t + 0.02)); // Attack
+    masterGain.gain.exponentialRampToValueAtTime(0.15, Math.max(0, t + dur - 0.05)); // Decay to sustain
+    masterGain.gain.linearRampToValueAtTime(0, Math.max(0, t + dur)); // Release
+
+    // Formant-like filter for smooth sound
     const filter = context.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = frequency * 3 + 800;
-    filter.Q.value = 1;
+    filter.frequency.value = frequency * 4;
+    filter.Q.value = 0.5;
     
-    // Main tone (sine wave for pure pitch reference)
+    // Main tone (Triangle for warm body)
     const osc1 = context.createOscillator();
-    osc1.type = 'sine';
+    osc1.type = 'triangle';
     osc1.frequency.value = frequency;
     const gain1 = context.createGain();
-    gain1.gain.value = 1.0;
+    gain1.gain.value = 0.8;
     osc1.connect(gain1).connect(filter);
     
-    // Subtle octave for richness
+    // Richness (Sine, octave up)
     const osc2 = context.createOscillator();
     osc2.type = 'sine';
     osc2.frequency.value = frequency * 2;
     const gain2 = context.createGain();
-    gain2.gain.value = 0.15;
+    gain2.gain.value = 0.3;
     osc2.connect(gain2).connect(filter);
+
+    // Tine/Bell attack (Sine, 1.5 octaves up with fast decay)
+    const osc3 = context.createOscillator();
+    osc3.type = 'sine';
+    osc3.frequency.value = frequency * 3;
+    const gain3 = context.createGain();
+    gain3.gain.setValueAtTime(0, Math.max(0, t));
+    gain3.gain.linearRampToValueAtTime(0.2, Math.max(0, t + 0.01));
+    gain3.gain.exponentialRampToValueAtTime(0.001, Math.max(0, t + 0.15));
+    osc3.connect(gain3).connect(filter);
     
     filter.connect(masterGain);
     masterGain.connect(context.destination);
 
-    osc1.start(t);
-    osc2.start(t);
-    osc1.stop(t + dur + 0.05);
-    osc2.stop(t + dur + 0.05);
+    osc1.start(Math.max(0, t));
+    osc2.start(Math.max(0, t));
+    osc3.start(Math.max(0, t));
+    osc1.stop(Math.max(0, t + dur + 0.05));
+    osc2.stop(Math.max(0, t + dur + 0.05));
+    osc3.stop(Math.max(0, t + dur + 0.05));
     
     // Track for cleanup
     this.activeOscillators.push({ osc: osc1, gain: masterGain });
     setTimeout(() => {
       const idx = this.activeOscillators.findIndex(item => item.osc === osc1);
       if (idx > -1) this.activeOscillators.splice(idx, 1);
-    }, (dur + 0.1) * 1000);
+    }, (dur + timeOffsetSec + 0.1) * 1000);
     
     return { osc: osc1, gain: masterGain };
   }
@@ -254,6 +277,10 @@ export class AudioEngine {
     if (this.animationFrame) cancelAnimationFrame(this.animationFrame);
     this.animationFrame = null;
     this.fadeOutAllTones();
+    
+    // Fixed #3: Clear activeOscillators immediately to prevent memory leak
+    this.activeOscillators = [];
+    
     this.source?.disconnect();
     this.mediaStream?.getTracks().forEach(t => t.stop());
     
@@ -262,17 +289,8 @@ export class AudioEngine {
       this.audioContext.close().catch(() => {});
     }
 
-    // iOS Safari Fix: Return audio session to normal playback state
-    if ('audioSession' in navigator) {
-      try {
-        (navigator as any).audioSession.type = 'playback';
-        setTimeout(() => {
-          if ('audioSession' in navigator) {
-            try { (navigator as any).audioSession.type = 'auto'; } catch (e) { /* ignore */ }
-          }
-        }, 100);
-      } catch (e) { /* ignore */ }
-    }
+    // iOS Safari Fix: Reset audio session to default
+    resetIOSAudioSession();
     
     // ไม่ปิด playbackContext เพื่อให้ preview ใช้ต่อได้
     // if (this.playbackContext && this.playbackContext.state !== 'closed') {

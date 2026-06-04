@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Mic, Waves, ArrowRight, X } from 'lucide-react';
 import { AudioEngine } from '../lib/audioEngine';
-import { frequencyToNote, midiToNoteName, getVoiceType } from '../lib/noteUtils';
-import type { VocalRange } from '../App';
+import { midiToNoteName } from '../lib/noteUtils';
+import type { VocalRange } from '../lib/types';
 
 interface Props {
   onBack: () => void;
@@ -13,277 +15,294 @@ interface Props {
 export default function VocalRangeView({ onBack, onSave, isOnboarding, onSkip }: Props) {
   const engineRef = useRef<AudioEngine | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const volumeHistoryRef = useRef<number[]>([]);
   
+  const [step, setStep] = useState<'intro' | 'reading' | 'result'>('intro');
   const [isListening, setIsListening] = useState(false);
-  const [curNote, setCurNote] = useState('—');
-  const [curFreq, setCurFreq] = useState(0);
-  const [lowMidi, setLowMidi] = useState<number | null>(null);
-  const [highMidi, setHighMidi] = useState<number | null>(null);
-  const [voiceType, setVoiceType] = useState('');
-  const [saved, setSaved] = useState(false);
-  const [noiseGate, setNoiseGate] = useState(0.015);
-  const [centsOff, setCentsOff] = useState(0);
+  const [frequencies, setFrequencies] = useState<number[]>([]);
+  const [resultRange, setResultRange] = useState<VocalRange | null>(null);
   
-  // Use Refs for high-frequency data to prevent extreme React render stuttering
+  // Real-time visual refs
   const currentVolRef = useRef(0);
+  const volumeHistoryRef = useRef<number[]>([]);
 
-  const startListening = async () => {
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (engineRef.current) engineRef.current.stop();
+    };
+  }, []);
+
+  const startReadingTest = async () => {
+    setStep('reading');
+    setFrequencies([]);
+    
     try {
       const engine = new AudioEngine();
-      engine.noiseGate = noiseGate;
+      engine.noiseGate = 0.015; // standard spoken voice noise gate
       engineRef.current = engine;
+      
       engine.onPitchDetected = (freq, vol) => {
         currentVolRef.current = vol;
         volumeHistoryRef.current.push(vol);
         if (volumeHistoryRef.current.length > 60) volumeHistoryRef.current.shift();
         
-        if (!freq || vol < 0.01) return;
-        const note = frequencyToNote(freq);
-        
-        // Bailout state updates if unchanged to save CPU
-        setCurNote(prev => prev !== note.fullName ? note.fullName : prev);
-        setCurFreq(prev => prev !== Math.round(freq) ? Math.round(freq) : prev);
-        setCentsOff(note.centsOff);
-        
-        setLowMidi(prev => (prev === null ? note.midiNumber : Math.min(prev, note.midiNumber)));
-        setHighMidi(prev => (prev === null ? note.midiNumber : Math.max(prev, note.midiNumber)));
+        // Only capture stable frequencies within normal human speaking ranges (70Hz to 300Hz)
+        if (freq && vol > 0.01 && freq > 70 && freq < 350) {
+          setFrequencies(prev => [...prev, freq]);
+        }
       };
+      
       await engine.start();
       setIsListening(true);
-      setSaved(false);
     } catch (error) {
       console.error('Microphone error:', error);
-      alert('ไม่สามารถเข้าถึงไมโครโฟนได้\nกรุณาตรวจสอบ:\n1. อนุญาตให้เข้าถึงไมโครโฟนใน Settings\n2. ปิดแอปอื่นที่ใช้ไมโครโฟนอยู่\n3. ลองรีเฟรชหน้าเว็บ');
+      alert('ไม่สามารถเข้าถึงไมโครโฟนได้ กรุณาตรวจสอบการอนุญาตการใช้งานไมโครโฟน');
+      setStep('intro');
     }
   };
 
-  const stopListening = () => {
-    engineRef.current?.stop();
+  const finishTest = () => {
+    if (engineRef.current) {
+      engineRef.current.stop();
+      engineRef.current = null;
+    }
     setIsListening(false);
-    if (lowMidi !== null && highMidi !== null) {
-      const vt = getVoiceType(lowMidi, highMidi);
-      setVoiceType(vt);
+
+    if (frequencies.length < 20) {
+      alert("เราจับเสียงของคุณได้ไม่มากพอ ลองอ่านข้อความให้นานขึ้นอีกนิดนะ");
+      setStep('intro');
+      return;
     }
-  };
 
-  const handleSave = () => {
-    if (lowMidi !== null && highMidi !== null && voiceType) {
-      onSave({ lowMidi, highMidi, voiceType });
-      setSaved(true);
+    // Calculate Median Frequency to find natural speaking pitch
+    const sorted = [...frequencies].sort((a, b) => a - b);
+    const medianFreq = sorted[Math.floor(sorted.length / 2)];
+    
+    // Mathematical classification based on speaking fundamental frequency (F0)
+    let voiceType = 'ทั่วไป';
+    let lowMidi = 48; // Default C3
+    let highMidi = 72; // Default C5
+
+    if (medianFreq < 100) {
+      voiceType = 'เบส';
+      lowMidi = 36; // C2
+      highMidi = 60; // C4
+    } else if (medianFreq < 130) {
+      voiceType = 'บาริโทน';
+      lowMidi = 43; // G2
+      highMidi = 67; // G4
+    } else if (medianFreq < 165) {
+      voiceType = 'เทเนอร์';
+      lowMidi = 48; // C3
+      highMidi = 72; // C5
+    } else if (medianFreq < 200) {
+      voiceType = 'อัลโต';
+      lowMidi = 53; // F3
+      highMidi = 77; // F5
+    } else {
+      voiceType = 'โซปราโน';
+      lowMidi = 60; // C4
+      highMidi = 84; // C6
     }
+
+    setResultRange({ lowMidi, highMidi, voiceType });
+    setStep('result');
   };
 
-  const reset = () => {
-    setLowMidi(null);
-    setHighMidi(null);
-    setVoiceType('');
-    setCurNote('—');
-    setCurFreq(0);
-    setCentsOff(0);
-    setSaved(false);
-    volumeHistoryRef.current = [];
-  };
-
-  const handleNoiseGate = (val: number) => {
-    setNoiseGate(val);
-    if (engineRef.current) engineRef.current.noiseGate = val;
-  };
-
-  useEffect(() => () => engineRef.current?.stop(), []);
-
-  // Implement Wake Lock to prevent screen sleep while testing vocal range
+  // Canvas visualizer for voice activity
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let wakeLock: any = null;
-    const requestWakeLock = async () => {
-      try {
-        if ('wakeLock' in navigator) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          wakeLock = await (navigator as any).wakeLock.request('screen');
-        }
-      } catch (err) {
-        console.warn('Wake Lock error:', err);
-      }
-    };
-
-    if (isListening) {
-      requestWakeLock();
-    }
-
-    const handleVisibilityChange = () => {
-      if (wakeLock !== null && document.visibilityState === 'visible' && isListening) {
-        requestWakeLock();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      if (wakeLock) { wakeLock.release().catch(() => {}); }
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [isListening]);
-
-  // Canvas visualizer
-  useEffect(() => {
+    if (step !== 'reading' || !isListening) return;
+    
     const canvas = canvasRef.current;
-    if (!canvas || !isListening) return;
+    if (!canvas) return;
     
     const ctx = canvas.getContext('2d')!;
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = 200 * dpr;
-    canvas.height = 200 * dpr;
-    canvas.style.width = '200px';
-    canvas.style.height = '200px';
+    canvas.width = 300 * dpr;
+    canvas.height = 80 * dpr;
+    canvas.style.width = '300px';
+    canvas.style.height = '80px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     
     let raf: number;
     const draw = () => {
-      ctx.clearRect(0, 0, 200, 200);
+      ctx.clearRect(0, 0, 300, 80);
+      const centerY = 40;
       
-      const centerX = 100;
-      const centerY = 100;
-      const baseRadius = 60;
+      ctx.beginPath();
+      ctx.moveTo(0, centerY);
       
-      // Draw waveform bars
-      const bars = 32;
-      for (let i = 0; i < bars; i++) {
-        const angle = (i / bars) * Math.PI * 2 - Math.PI / 2;
-        const volIndex = Math.floor((i / bars) * volumeHistoryRef.current.length);
-        const vol = volumeHistoryRef.current[volIndex] || 0;
-        const barHeight = Math.min(vol * 800, 40);
+      const sliceWidth = 300 / 60;
+      for (let i = 0; i < 60; i++) {
+        const x = i * sliceWidth;
+        const vol = volumeHistoryRef.current[i] || 0;
+        const vHeight = Math.min(vol * 400, 35); // amplitude
         
-        const x1 = centerX + Math.cos(angle) * baseRadius;
-        const y1 = centerY + Math.sin(angle) * baseRadius;
-        const x2 = centerX + Math.cos(angle) * (baseRadius + barHeight);
-        const y2 = centerY + Math.sin(angle) * (baseRadius + barHeight);
-        
-        const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-        gradient.addColorStop(0, 'rgba(108, 92, 231, 0.3)');
-        gradient.addColorStop(1, 'rgba(108, 92, 231, 0.8)');
-        
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
+        ctx.lineTo(x, centerY - vHeight);
       }
       
-      // Draw center circle
-      const currentVol = currentVolRef.current;
-      const pulseScale = 1 + (currentVol * 2);
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, baseRadius * 0.7 * pulseScale, 0, Math.PI * 2);
-      const circleGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, baseRadius * 0.7);
-      circleGrad.addColorStop(0, 'rgba(108, 92, 231, 0.2)');
-      circleGrad.addColorStop(1, 'rgba(108, 92, 231, 0.05)');
-      ctx.fillStyle = circleGrad;
-      ctx.fill();
+      ctx.strokeStyle = '#85b09a'; // Sage color
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.stroke();
       
+      // Bottom reflection
+      ctx.beginPath();
+      ctx.moveTo(0, centerY);
+      for (let i = 0; i < 60; i++) {
+        const x = i * sliceWidth;
+        const vol = volumeHistoryRef.current[i] || 0;
+        const vHeight = Math.min(vol * 400, 35);
+        ctx.lineTo(x, centerY + vHeight);
+      }
+      ctx.strokeStyle = 'rgba(133, 176, 154, 0.3)';
+      ctx.stroke();
+
       raf = requestAnimationFrame(draw);
     };
     
     draw();
     return () => cancelAnimationFrame(raf);
-  }, [isListening]); // REMOVED volume DEPENDENCY to stop canvas loop recreation stutter!
-
-  // We can render cents bar dynamically using a fast ref approach or just trigger it sparingly.
-  // Using inline style for cents bar since it's lightweight DOM update or rely on React state if needed.
-  // Actually, we can just let it stay a ref and only the dot moves smoothly, wait, the dot needs state to move.
-  // For extreme smoothness, we update the dot style directly via ref!
+  }, [step, isListening]);
 
   return (
-    <div className="vr" style={{ animation: 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-      <div className="vr-head">
+    <div className="fixed inset-0 bg-sand flex flex-col items-center justify-center p-6 z-[200]">
+      
+      {/* Absolute Nav */}
+      <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-10 pt-[calc(24px+env(safe-area-inset-top))]">
         {!isOnboarding ? (
-          <button className="cb" onClick={() => { engineRef.current?.stop(); onBack(); }}>←</button>
-        ) : (
           <button 
-            className="cb" 
-            onClick={() => { engineRef.current?.stop(); onSkip?.(); }}
-            style={{ fontSize: '14px', width: 'auto', padding: '0 12px', background: 'rgba(15, 23, 42, 0.05)', border: 'none', color: 'var(--text2)', fontWeight: 600 }}
+            onClick={onBack}
+            className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm border border-stone-200 text-charcoal hover:bg-stone-100 transition-colors"
           >
-            ข้าม
+            <X size={20} />
+          </button>
+        ) : (
+          <div /> // Spacer
+        )}
+        
+        {isOnboarding && onSkip && (
+          <button 
+            onClick={onSkip}
+            className="px-5 py-2 rounded-full bg-stone-200/50 text-charcoal/70 font-bold text-sm hover:bg-stone-200 transition-colors"
+          >
+            ข้ามไปก่อน
           </button>
         )}
-        <span className="vr-title">{isOnboarding ? '🎙️ จัดการช่วงเสียงของคุณ' : '🎙️ ทดสอบช่วงเสียง'}</span>
-        <div style={{display: 'flex', alignItems: 'center', gap: '8px', background: '#f5f5f7', padding: '4px 12px', borderRadius: '20px'}}>
-          <input
-            type="range"
-            min="0.005" max="0.05" step="0.001"
-            value={noiseGate}
-            onChange={(e) => handleNoiseGate(parseFloat(e.target.value))}
-            style={{width: '60px', accentColor: '#6c5ce7'}}
-          />
-        </div>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 400, margin: '0 auto' }}>
-        <p style={{ textAlign: 'center', color: '#86868b', fontSize: 13, lineHeight: 1.5, pointerEvents: 'none', marginBottom: 28, padding: '0 20px' }}>
-          {isOnboarding && <b>แอปจะปรับคีย์เพลงให้เข้ากับระดับเสียงคุณโดยอัตโนมัติ<br/><br/></b>}
-          <b>วิธีวัดช่วงเสียง:</b> สูดลมหายใจลึกๆ กดเริ่มวัด แล้วร้องเสียง "อ้า" จาก <u>เสียงต่ำที่สุด</u> ไล่ยาวไปจนถึง <u>เสียงสูงที่สุด</u> ที่คุณออกเสียงได้ชัดเจน
-        </p>
+      <AnimatePresence mode="wait">
+        
+        {/* STEP 1: INTRO */}
+        {step === 'intro' && (
+          <motion.div 
+            key="intro"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="flex flex-col items-center text-center max-w-sm w-full"
+          >
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-sage-light to-sage-dark flex items-center justify-center text-white mb-8 shadow-xl shadow-sage/20">
+              <Mic size={40} />
+            </div>
+            
+            <h1 className="text-3xl font-black text-charcoal mb-4 tracking-tight">
+              ค้นหาช่วงเสียงของคุณ
+            </h1>
+            
+            <p className="text-charcoal/70 font-medium leading-relaxed mb-8 text-base">
+              อ่านข้อความด้านล่างด้วยน้ำเสียงปกติ เราจะปรับบทเรียนให้เข้ากับเสียงของคุณ
+            </p>
 
-        <div style={{ position: 'relative', marginBottom: 20 }}>
-          {isListening && <canvas ref={canvasRef} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 0 }} />}
-          <div className={`pitch-circle ${isListening ? 'on' : ''}`} style={{ position: 'relative', zIndex: 1 }}>
-            <div className="nn">{curNote}</div>
-            {isListening && <div className="hz">{curFreq} Hz</div>}
-          </div>
-        </div>
-
-        {isListening && (
-          <div className="cents-bar">
-            <div className="cents-dot" style={{ left: `${Math.max(0, Math.min(100, 50 + centsOff))}%`, transition: 'left 0.1s ease-out' }} />
-          </div>
+            <button 
+              onClick={startReadingTest}
+              className="w-full bg-charcoal text-white py-5 rounded-full font-black text-lg shadow-xl shadow-charcoal/20 active:scale-95 transition-transform"
+            >
+              เริ่มทดสอบ
+            </button>
+          </motion.div>
         )}
 
-        <div className="range-info">
-          <div className="rb">
-            <div className="rl">ต่ำสุด</div>
-            <div className="rv">{lowMidi !== null ? midiToNoteName(lowMidi) : '—'}</div>
-          </div>
-          <div className="rb">
-            <div className="rl">สูงสุด</div>
-            <div className="rv">{highMidi !== null ? midiToNoteName(highMidi) : '—'}</div>
-          </div>
-          <div className="rb">
-            <div className="rl">Range</div>
-            <div className="rv">{lowMidi !== null && highMidi !== null ? `${highMidi - lowMidi} ST` : '—'}</div>
-          </div>
-        </div>
+        {/* STEP 2: READING TEST */}
+        {step === 'reading' && (
+          <motion.div 
+            key="reading"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05 }}
+            className="flex flex-col items-center text-center max-w-md w-full"
+          >
+            <div className="bg-white p-6 rounded-[2rem] shadow-lg shadow-stone-200/50 border border-stone-100 mb-6 w-full relative overflow-hidden">
+               <div className="absolute -top-10 -right-10 w-32 h-32 bg-sage-light/20 rounded-full blur-2xl" />
+               
+               <div className="relative z-10">
+                 <p className="text-lg font-bold text-charcoal leading-relaxed">
+                   "ลมหายใจไหลเวียนดั่งสายน้ำ เสียงสะท้อนเกิดขึ้นอย่างเป็นธรรมชาติ เสียงของฉันมีเอกลักษณ์และเป็นตัวของตัวเอง"
+                 </p>
+               </div>
+            </div>
 
-        {voiceType && <div className="voice-label">🎤 Voice Type: {voiceType}</div>}
+            <div className="h-[80px] mb-6 relative">
+              <canvas ref={canvasRef} className="absolute inset-0" />
+            </div>
 
-        {saved && (
-          <div style={{
-            background: 'linear-gradient(135deg, #00b894, #00cec9)', borderRadius: 12,
-            padding: '10px 20px', color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 16,
-          }}>
-            ✅ บันทึกแล้ว! บทเรียนทั้งหมดจะปรับตามเสียงของคุณ
-          </div>
-        )}
-      </div>
+            <p className="text-taupe font-bold uppercase tracking-widest text-xs mb-6 animate-pulse">
+              กำลังฟัง...
+            </p>
 
-      <div className="vr-actions">
-        {!isListening ? (
-          <>
-            <button className="btn-p" onClick={startListening}>เริ่มวัด</button>
-            {voiceType && !saved && (
-              <button className="btn-p" style={{ background: '#00b894' }} onClick={handleSave}>
-                💾 บันทึกผลและปรับบทเรียน
-              </button>
-            )}
-          </>
-        ) : (
-          <button className="btn-p" style={{ background: '#e17055' }} onClick={stopListening}>หยุด</button>
+            <button 
+              onClick={finishTest}
+              className="w-full bg-sage-dark text-white py-4 rounded-full font-bold text-base shadow-xl shadow-sage/30 active:scale-95 transition-transform"
+            >
+              เสร็จแล้ว
+            </button>
+          </motion.div>
         )}
-        {(lowMidi !== null) && !isListening && (
-          <button className="btn-s" onClick={reset}>วัดใหม่</button>
+
+        {/* STEP 3: RESULT */}
+        {step === 'result' && resultRange && (
+          <motion.div 
+            key="result"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center text-center max-w-sm w-full"
+          >
+            <div className="w-24 h-24 rounded-full bg-clay-light/20 border-2 border-clay flex items-center justify-center text-clay-dark mb-6 shadow-inner">
+              <Waves size={40} />
+            </div>
+            
+            <span className="inline-block px-4 py-1 bg-charcoal/5 rounded-full text-[10px] font-bold text-charcoal/60 uppercase tracking-widest mb-3 border border-charcoal/10">
+              ประเภทเสียงของคุณ
+            </span>
+            
+            <h1 className="text-4xl font-black text-charcoal mb-2 tracking-tight">
+              {resultRange.voiceType}
+            </h1>
+            
+            <p className="text-charcoal/70 font-medium leading-relaxed mb-8 text-base">
+              ช่วงเสียงของคุณอยู่ระหว่าง <b className="text-charcoal">{midiToNoteName(resultRange.lowMidi)}</b> ถึง <b className="text-charcoal">{midiToNoteName(resultRange.highMidi)}</b>
+              <br/>
+              <span className="text-sm text-taupe block mt-2">บทเรียนทั้งหมดถูกปรับให้เข้ากับเสียงของคุณแล้ว</span>
+            </p>
+
+            <button 
+              onClick={() => onSave(resultRange)}
+              className="w-full bg-clay hover:bg-clay-dark text-white py-4 rounded-full font-bold text-base flex items-center justify-center gap-2 shadow-xl shadow-clay/20 active:scale-95 transition-all"
+            >
+              เริ่มใช้งาน <ArrowRight size={20} />
+            </button>
+
+            <button 
+              onClick={() => setStep('intro')}
+              className="mt-4 text-sm font-bold text-taupe hover:text-charcoal transition-colors"
+            >
+              ทดสอบใหม่
+            </button>
+          </motion.div>
         )}
-      </div>
+
+      </AnimatePresence>
     </div>
   );
 }

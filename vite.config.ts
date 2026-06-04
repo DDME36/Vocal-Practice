@@ -1,10 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    tailwindcss(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -13,8 +15,8 @@ export default defineConfig({
         name: 'Vocal Practice - ฝึกร้องเพลง',
         short_name: 'Vocal Practice',
         description: 'แอปฝึกร้องเพลงด้วย AI - วัดช่วงเสียง ฝึกสเกล และพัฒนาทักษะการร้อง',
-        theme_color: '#6c5ce7',
-        background_color: '#0f172a',
+        theme_color: '#c98e65', // Fixed #5: clay - primary color ของ earthy theme
+        background_color: '#fdfbf7', // Fixed #5: sand - background color จริง
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',

@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
-import type { VocalRange } from '../App';
+import { useState } from 'react';
+import { motion } from 'motion/react';
+import { Settings, Mic, Waves, Leaf, ArrowLeft, Sun } from 'lucide-react';
+import type { VocalRange } from '../lib/types';
 import SettingsView from './SettingsView';
-import { IconSettings, IconMic, IconCheckCircle, IconFlame, IconMusic } from './Icons';
-import { loadStats, getLast7DaysActivity } from '../lib/statsManager';
+import ProgressDashboard from './ProgressDashboard';
+import { useStatsStore } from '../stores/useStatsStore';
 
 interface Props { 
   vocalRange: VocalRange | null;
@@ -12,16 +14,11 @@ interface Props {
 
 export default function ProfileView({ vocalRange, skillLevel, onChangeSkillLevel }: Props) {
   const [showSettings, setShowSettings] = useState(false);
-  const [stats, setStats] = useState(() => loadStats());
-  const [activityDays, setActivityDays] = useState<boolean[]>([]);
-  const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-  const today = new Date().getDay();
-
-  // โหลดสถิติและ activity เมื่อเปิดหน้า
-  useEffect(() => {
-    setStats(loadStats());
-    setActivityDays(getLast7DaysActivity());
-  }, []);
+  const [showProgress, setShowProgress] = useState(false);
+  
+  // Fixed #1: Use Zustand store instead of direct localStorage access
+  const { stats, getLast7DaysActivity } = useStatsStore();
+  const activityDays = getLast7DaysActivity();
 
   if (showSettings) {
     return <SettingsView 
@@ -32,152 +29,164 @@ export default function ProfileView({ vocalRange, skillLevel, onChangeSkillLevel
     />;
   }
 
-  return (
-    <div className="home profile-page">
-      <header className="home-header" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <h1>Artist Dashboard</h1>
-        <button className="gear-btn" onClick={() => setShowSettings(true)}><IconSettings size={28} /></button>
-      </header>
+  if (showProgress) {
+    return (
+      <div className="h-full bg-sand">
+        <header className="flex justify-between items-center p-6 bg-white/80 backdrop-blur-md border-b border-stone-200/50 sticky top-0 z-50">
+          <button 
+            className="w-12 h-12 rounded-full bg-sand-dark flex items-center justify-center text-charcoal hover:bg-stone-200 transition-colors"
+            onClick={() => setShowProgress(false)}
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="text-xl font-bold text-charcoal">เส้นทางการพัฒนา</h1>
+          <div className="w-12" />
+        </header>
+        <ProgressDashboard />
+      </div>
+    );
+  }
 
-      {/* ID Card */}
-      <div className="id-card">
-        <div className="id-avatar">🎙️</div>
-        <div className="id-info">
-          <div className="id-name">Guest Singer</div>
-          <div className="id-type">{vocalRange?.voiceType || 'Unknown Voice Type'}</div>
+  const skillLevelConfig = {
+    beginner: { label: 'เริ่มต้น', color: 'text-sage-dark', bg: 'bg-sage-light/20', icon: <Leaf size={24} className="text-sage-dark" /> },
+    intermediate: { label: 'ปานกลาง', color: 'text-ochre-dark', bg: 'bg-ochre-light/20', icon: <Sun size={24} className="text-ochre-dark" /> },
+    advanced: { label: 'ขั้นสูง', color: 'text-clay-dark', bg: 'bg-clay-light/20', icon: <Waves size={24} className="text-clay-dark" /> }
+  };
+
+  const currentSkill = skillLevel ? skillLevelConfig[skillLevel] : null;
+
+  return (
+    <div className="min-h-full bg-sand pb-32 pt-12 px-6">
+      
+      {/* Header */}
+      <div className="flex justify-between items-center mb-10 mt-6">
+        <div>
+          <h1 className="text-4xl font-black text-charcoal tracking-tight mb-1">โปรไฟล์</h1>
+          <p className="text-taupe font-medium text-lg">สถิติและข้อมูลเสียงของคุณ</p>
         </div>
-        <div className="id-actions">›</div>
+        <motion.button 
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setShowSettings(true)}
+          className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-charcoal shadow-sm border border-stone-200/50 hover:shadow-md transition-all"
+        >
+          <Settings size={24} />
+        </motion.button>
       </div>
 
-      {/* Skill Level Card */}
-      {skillLevel && (
-        <div style={{
-          background: 'white',
-          borderRadius: '16px',
-          padding: '16px',
-          marginTop: '16px',
-          border: '1px solid rgba(15, 23, 42, 0.08)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: skillLevel === 'beginner' ? 'rgba(52, 211, 153, 0.15)' : 
-                         skillLevel === 'intermediate' ? 'rgba(251, 191, 36, 0.15)' : 
-                         'rgba(239, 68, 68, 0.15)',
-              border: skillLevel === 'beginner' ? '2px solid rgba(52, 211, 153, 0.3)' : 
-                     skillLevel === 'intermediate' ? '2px solid rgba(251, 191, 36, 0.3)' : 
-                     '2px solid rgba(239, 68, 68, 0.3)'
-            }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={
-                skillLevel === 'beginner' ? '#10b981' : 
-                skillLevel === 'intermediate' ? '#f59e0b' : 
-                '#ef4444'
-              } strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="22"/>
-              </svg>
+      {/* Main Identity Card */}
+      <div className="bg-gradient-to-br from-[#e9dfce] to-sand-dark rounded-[2.5rem] p-8 shadow-sm border border-white mb-8 relative overflow-hidden">
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/40 rounded-full blur-2xl" />
+        
+        <div className="flex flex-col items-center text-center relative z-10">
+          <div className="w-24 h-24 rounded-full bg-white shadow-xl shadow-stone-300/30 flex items-center justify-center text-clay-dark mb-6">
+            <Mic size={36} />
+          </div>
+          
+          <h2 className="text-3xl font-black text-charcoal mb-2">นักร้องเสียงทอง</h2>
+          <div className="inline-flex items-center gap-2 bg-white/60 px-4 py-2 rounded-full text-charcoal font-bold text-sm border border-white">
+            <Waves size={16} className="text-clay" />
+            {vocalRange?.voiceType || 'ยังไม่ได้ประเมินช่วงเสียง'}
+          </div>
+        </div>
+      </div>
+
+      {/* Organic Skill Level */}
+      {currentSkill && (
+        <div className={`rounded-[2rem] p-6 mb-10 flex items-center justify-between border border-white/50 shadow-sm ${currentSkill.bg}`}>
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-sm">
+              {currentSkill.icon}
             </div>
             <div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
-                ระดับความสามารถ
+              <div className="text-[10px] font-bold text-charcoal/50 uppercase tracking-widest mb-1">
+                ระดับปัจจุบัน
               </div>
-              <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px', fontWeight: 600 }}>
-                {skillLevel === 'beginner' && 'เริ่มต้น'}
-                {skillLevel === 'intermediate' && 'ปานกลาง'}
-                {skillLevel === 'advanced' && 'ขั้นสูง'}
+              <div className={`text-xl font-black ${currentSkill.color}`}>
+                {currentSkill.label}
               </div>
             </div>
           </div>
           {onChangeSkillLevel && (
             <button
               onClick={onChangeSkillLevel}
-              style={{
-                padding: '8px 16px',
-                background: '#a78bfa',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                fontSize: '13px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: '0 2px 8px rgba(167, 139, 250, 0.3)'
-              }}
+              className="px-5 py-2.5 bg-white rounded-full text-sm font-bold text-charcoal shadow-sm hover:shadow-md transition-all"
             >
-              เปลี่ยน
+              ประเมินใหม่
             </button>
           )}
         </div>
       )}
 
-      {/* Stats Grid */}
-      <h2 className="sec-title" style={{marginTop: 32}}>Vocal Stats</h2>
-      <div className="stats-grid">
-        <div className="stat-box">
-          <div className="st-val" style={{color: '#6366f1'}}>{stats.totalExercises}</div>
-          <div className="st-lbl">Exercises</div>
+      {/* Flow Heatmap */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-charcoal">จังหวะการฝึกซ้อม</h2>
         </div>
-        <div className="stat-box">
-          <div className="st-val" style={{color: '#00b894'}}>{stats.perfectHits}</div>
-          <div className="st-lbl">Perfect Hits</div>
-        </div>
-        <div className="stat-box">
-          <div className="st-val" style={{color: '#e84118'}}>{stats.maxCombo}</div>
-          <div className="st-lbl">Max Combo</div>
-        </div>
-        <div className="stat-box">
-          <div className="st-val" style={{color: '#fbc531'}}>{stats.currentStreak}</div>
-          <div className="st-lbl">Days Streak</div>
-        </div>
-      </div>
+        
+        <div className="bg-white/60 backdrop-blur-sm rounded-[2rem] p-6 border border-stone-200/50 shadow-sm">
+          <div className="flex justify-between gap-3">
+            {['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'].map((day, i) => {
+              const today = new Date().getDay();
+              const dayIndex = (i - today + 6) % 7;
+              const isPracticed = activityDays[dayIndex] || false;
+              const isToday = i === today;
 
-      {/* Daily Calendar (Sleeker Timeline) */}
-      <h2 className="sec-title" style={{marginTop: 32}}>Activity Timeline</h2>
-      <div className="cal-strip">
-        {days.map((d, i) => {
-          const dayIndex = (i - today + 6) % 7;
-          const isPracticed = activityDays[dayIndex] || false;
-          return (
-            <div key={i} className={`cal-day ${i === today ? 'cal-today' : ''} ${isPracticed ? 'cal-done' : ''}`}>
-               <div className="cd-l">{d}</div>
-               <div className="cd-dot"></div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Records Badge (Replacing Hexagons) */}
-      <h2 className="sec-title" style={{marginTop: 32}}>Milestones Collection</h2>
-      <div className="record-grid">
-        {[
-            {icon: <IconMic size={20}/>, label: 'First Note', active: true},
-            {icon: <IconMusic size={20}/>, label: 'Pitch Perfect', active: true},
-            {icon: <IconFlame size={20}/>, label: '7-Day Streak', active: false},
-            {icon: <IconCheckCircle size={20}/>, label: 'Master Class', active: false},
-            {icon: <IconMic size={20}/>, label: 'Vocal God', active: false},
-            {icon: <IconFlame size={20}/>, label: '30-Day Streak', active: false},
-        ].map((a, i) => (
-          <div key={i} className="record-item">
-            <div className={`vinyl-disc ${a.active ? 'active' : 'locked'}`}>
-               <div className="v-label">
-                  <div className="v-icon" style={{pointerEvents: 'none', userSelect: 'none'}}>{a.icon}</div>
-               </div>
-            </div>
-            <div className="r-title">{a.label}</div>
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center">
+                  <div className={`text-[10px] font-bold uppercase mb-3 ${isToday ? 'text-charcoal' : 'text-taupe'}`}>
+                    {day}
+                  </div>
+                  <div className={`w-full aspect-[1/2] rounded-full flex items-center justify-center transition-all duration-500 ${
+                    isPracticed 
+                      ? 'bg-sage text-white shadow-inner'
+                      : isToday
+                      ? 'bg-sand-dark border-2 border-sage-light text-transparent'
+                      : 'bg-sand-dark text-transparent'
+                  }`}>
+                    {isPracticed && <div className="w-2 h-2 bg-white rounded-full" />}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        </div>
       </div>
-      <div style={{height: 100}}></div>
+
+      {/* Soft Stats Grid */}
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-charcoal">สถิติความสำเร็จ</h2>
+          <button
+            onClick={() => setShowProgress(true)}
+            className="text-sm font-bold text-clay hover:text-clay-dark transition-colors"
+          >
+            ดูรายละเอียด
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            { label: 'บทเรียนที่จบแล้ว', value: stats.totalExercises, color: 'text-clay', bg: 'bg-clay/10' },
+            { label: 'โน้ตที่แม่นยำ', value: stats.perfectHits, color: 'text-sage-dark', bg: 'bg-sage-light/20' },
+            { label: 'คอมโบสูงสุด', value: stats.maxCombo, color: 'text-ochre-dark', bg: 'bg-ochre-light/20' }
+          ].map((stat, i) => (
+            <div
+              key={i}
+              onClick={() => setShowProgress(true)}
+              className="bg-white/60 backdrop-blur-sm rounded-[2rem] p-6 border border-stone-200/50 shadow-sm cursor-pointer hover:shadow-md transition-all flex flex-col justify-center"
+            >
+              <div className={`text-4xl font-black mb-2 ${stat.color}`}>
+                {stat.value}
+              </div>
+              <div className="text-xs font-bold text-taupe uppercase tracking-widest leading-snug">
+                {stat.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
     </div>
   );
 }

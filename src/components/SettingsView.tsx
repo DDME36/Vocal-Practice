@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Sliders, RotateCcw, Zap } from 'lucide-react';
-import type { VocalRange } from '../App';
+import { Sliders, RotateCcw, Zap, ArrowLeft, Mic, Target, Flame, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
+import type { VocalRange } from '../lib/types';
 import { 
   loadLatencySettings, 
   saveLatencySettings, 
@@ -9,6 +9,8 @@ import {
   type LatencySettings 
 } from '../lib/latencyCalibration';
 import LatencyCalibrationTest from './LatencyCalibrationTest';
+import VocalRangeView from './VocalRangeView';
+import { useSettingsStore } from '../stores/useSettingsStore';
 
 interface Props { 
   vocalRange: VocalRange | null; 
@@ -18,12 +20,14 @@ interface Props {
 }
 
 export default function SettingsView({ vocalRange, onClose, skillLevel, onChangeSkillLevel }: Props) {
-  const vt = vocalRange ? vocalRange.voiceType : 'Not Set';
+  const vt = vocalRange ? vocalRange.voiceType : 'ยังไม่ได้ตั้งค่า';
   
   const [dailyGoal, setDailyGoal] = useState(() => localStorage.getItem('setting_dailyGoal') || '10');
   const [latencySettings, setLatencySettings] = useState<LatencySettings>(loadLatencySettings());
   const [showLatencyDetails, setShowLatencyDetails] = useState(false);
   const [showLatencyTest, setShowLatencyTest] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showVocalRangeTest, setShowVocalRangeTest] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('setting_dailyGoal', dailyGoal);
@@ -52,15 +56,23 @@ export default function SettingsView({ vocalRange, onClose, skillLevel, onChange
     setShowLatencyTest(false);
   };
 
-  const handleResetProgress = () => {
-    if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตข้อมูลทั้งหมด? (ช่วงเสียง, ระดับความสามารถ, และความคืบหน้าทั้งหมดจะถูกลบ)')) {
-      localStorage.clear();
-      window.location.reload();
-    }
+  const executeReset = () => {
+    localStorage.clear();
+    window.location.reload();
   };
 
   return (
     <>
+      {showVocalRangeTest && (
+        <VocalRangeView
+          onBack={() => setShowVocalRangeTest(false)}
+          onSave={(range) => {
+            useSettingsStore.getState().setVocalRange(range);
+            setShowVocalRangeTest(false);
+          }}
+        />
+      )}
+
       {showLatencyTest && (
         <LatencyCalibrationTest
           currentSettings={latencySettings}
@@ -68,270 +80,183 @@ export default function SettingsView({ vocalRange, onClose, skillLevel, onChange
           onCancel={() => setShowLatencyTest(false)}
         />
       )}
-      
-      <div className="home settings-page" style={{ paddingBottom: 100, animation: 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-      <header className="home-header" style={{display:'flex', justifyContent:'space-between', alignItems:'center', position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg)', borderBottom: '1px solid var(--border)'}}>
-        <h1 style={{margin: 0}}>Settings</h1>
-        <button className="cb" onClick={onClose} style={{width: 44, height: 44, borderRadius: 22, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>✕</button>
-      </header>
-      
-      <div style={{height: 24}}></div>
 
-      <div className="set-group">
-        <div className="set-item" style={{cursor: 'default'}}>
-          <div style={{display:'flex', alignItems:'center', gap: 16}}>
-            <div className="set-icon" style={{background: 'rgba(52, 211, 153, 0.1)', color: '#34d399'}}>🎙️</div>
-            <div className="set-label">ช่วงเสียง (Vocal Range)</div>
-          </div>
-          <div className="set-val">{vt}</div>
-        </div>
-        {skillLevel && onChangeSkillLevel && (
-          <div className="set-item" onClick={onChangeSkillLevel}>
-            <div style={{display:'flex', alignItems:'center', gap: 16}}>
-              <div className="set-icon" style={{background: 'rgba(167, 139, 250, 0.1)', color: '#a78bfa'}}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                  <line x1="12" y1="19" x2="12" y2="22"/>
-                </svg>
-              </div>
-              <div className="set-label">ระดับความสามารถ</div>
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-charcoal/40 backdrop-blur-sm px-6 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center mb-4">
+              <Trash2 size={24} />
             </div>
-            <div className="set-val">
-              {skillLevel === 'beginner' && 'เริ่มต้น'}
-              {skillLevel === 'intermediate' && 'ปานกลาง'}
-              {skillLevel === 'advanced' && 'ขั้นสูง'}
-              <span className="set-arrow"> ›</span>
-            </div>
-          </div>
-        )}
-        <div className="set-item" onClick={cycleDailyGoal}>
-          <div style={{display:'flex', alignItems:'center', gap: 16}}>
-            <div className="set-icon" style={{background: 'rgba(251, 191, 36, 0.1)', color: '#fbbf24'}}>🔥</div>
-            <div className="set-label">เป้าหมายรายวัน</div>
-          </div>
-          <div className="set-val">{dailyGoal} บทฝึก</div>
-        </div>
-      </div>
-
-      {/* Latency Compensation Section */}
-      <div className="set-group">
-        <div 
-          className="set-item" 
-          onClick={() => setShowLatencyDetails(!showLatencyDetails)}
-          style={{cursor: 'pointer'}}
-        >
-          <div style={{display:'flex', alignItems:'center', gap: 16}}>
-            <div className="set-icon" style={{background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1'}}>
-              <Sliders size={20} />
-            </div>
-            <div>
-              <div className="set-label">ชดเชยความล่าช้าเสียง</div>
-              <div style={{fontSize: 12, color: 'var(--text2)', marginTop: 2}}>
-                ปรับถ้ารู้สึกว่าเสียงไม่ตรงจังหวะ
-              </div>
-            </div>
-          </div>
-          <div className="set-val">
-            {latencySettings.totalCompensation}ms
-            <span className="set-arrow"> {showLatencyDetails ? '▼' : '›'}</span>
-          </div>
-        </div>
-
-        {showLatencyDetails && (
-          <div style={{
-            padding: '20px 24px',
-            background: 'var(--bg-secondary)',
-            borderTop: '1px solid var(--border)'
-          }}>
-            {/* Auto Test Button */}
-            <button
-              onClick={() => setShowLatencyTest(true)}
-              style={{
-                width: '100%',
-                padding: '16px',
-                background: 'linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '15px',
-                fontWeight: 700,
-                color: 'white',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                marginBottom: 20,
-                boxShadow: '0 4px 16px rgba(167, 139, 250, 0.3)',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(167, 139, 250, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(167, 139, 250, 0.3)';
-              }}
-            >
-              <Zap size={20} />
-              ทดสอบอัตโนมัติ (แนะนำ)
-            </button>
-
-            <div style={{
-              textAlign: 'center',
-              fontSize: 13,
-              color: 'var(--text2)',
-              marginBottom: 20,
-              fontWeight: 600
-            }}>
-              หรือปรับด้วยตัวเอง
-            </div>
-
-            {/* Manual Offset Control */}
-            <div style={{marginBottom: 20}}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: 12
-              }}>
-                <span style={{fontSize: 14, fontWeight: 600, color: 'var(--text)'}}>
-                  ปรับเพิ่มเติม
-                </span>
-                <span style={{fontSize: 14, fontWeight: 700, color: 'var(--accent)'}}>
-                  {latencySettings.manualOffset > 0 ? '+' : ''}{latencySettings.manualOffset}ms
-                </span>
-              </div>
-              
-              <div style={{display: 'flex', gap: 8, marginBottom: 12}}>
-                <button
-                  onClick={() => handleLatencyAdjust(-10)}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    background: 'white',
-                    border: '1px solid var(--border)',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: 'var(--text)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  -10ms
-                </button>
-                <button
-                  onClick={() => handleLatencyAdjust(-1)}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    background: 'white',
-                    border: '1px solid var(--border)',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: 'var(--text)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  -1ms
-                </button>
-                <button
-                  onClick={() => handleLatencyAdjust(1)}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    background: 'white',
-                    border: '1px solid var(--border)',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: 'var(--text)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  +1ms
-                </button>
-                <button
-                  onClick={() => handleLatencyAdjust(10)}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    background: 'white',
-                    border: '1px solid var(--border)',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: 'var(--text)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  +10ms
-                </button>
-              </div>
-
-              <button
-                onClick={handleLatencyReset}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'white',
-                  border: '1px solid var(--border)',
-                  borderRadius: '12px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: 'var(--text2)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  transition: 'all 0.2s'
-                }}
+            <h3 className="text-xl font-black text-charcoal mb-2">ยืนยันการล้างข้อมูล?</h3>
+            <p className="text-charcoal/70 font-medium mb-6 leading-relaxed">
+              การกระทำนี้จะลบข้อมูลช่วงเสียง, ระดับความสามารถ, และสถิติการฝึกทั้งหมดของคุณ โดย<strong className="text-rose-500">ไม่สามารถกู้คืนได้</strong>
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowResetConfirm(false)}
+                className="flex-1 py-3 bg-stone-100 font-bold text-charcoal rounded-xl hover:bg-stone-200 transition-colors"
               >
-                <RotateCcw size={16} />
-                รีเซ็ตเป็นค่าเริ่มต้น
+                ยกเลิก
+              </button>
+              <button 
+                onClick={executeReset}
+                className="flex-1 py-3 bg-rose-500 font-bold text-white rounded-xl hover:bg-rose-600 shadow-md shadow-rose-500/20 active:scale-95 transition-all"
+              >
+                ล้างข้อมูล
               </button>
             </div>
-
-            {/* Info */}
-            <div style={{
-              padding: '12px 16px',
-              background: 'rgba(99, 102, 241, 0.05)',
-              borderRadius: '12px',
-              border: '1px solid rgba(99, 102, 241, 0.1)'
-            }}>
-              <div style={{fontSize: 13, color: 'var(--text2)', lineHeight: 1.5}}>
-                <strong style={{color: 'var(--text)'}}>วิธีใช้:</strong><br/>
-                • ถ้ารู้สึกว่าเสียงของคุณ "ช้ากว่า" → เพิ่มค่า (+)<br/>
-                • ถ้ารู้สึกว่าเสียงของคุณ "เร็วกว่า" → ลดค่า (-)<br/>
-                • ค่าเริ่มต้น: {latencySettings.inputLatency + latencySettings.processingLatency + latencySettings.outputLatency}ms
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="set-group">
-        <div className="set-item" onClick={handleResetProgress}>
-          <div style={{display:'flex', alignItems:'center', gap: 16}}>
-            <div className="set-icon" style={{background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444'}}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 6h18"/>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
-                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-              </svg>
-            </div>
-            <div className="set-label" style={{color: '#ef4444', fontWeight: 600}}>รีเซ็ตข้อมูลทั้งหมด</div>
           </div>
         </div>
+      )}
+      
+      <div className="absolute inset-0 bg-sand text-charcoal overflow-y-auto animate-in fade-in slide-in-from-bottom-8 duration-300 pb-32">
+        <header className="sticky top-0 z-10 flex justify-between items-center p-6 bg-white/80 backdrop-blur-md border-b border-stone-200/50">
+          <h1 className="text-2xl font-black text-charcoal">ตั้งค่า</h1>
+          <button 
+            className="w-12 h-12 rounded-full bg-sand-dark flex items-center justify-center text-charcoal hover:bg-stone-200 transition-colors" 
+            onClick={onClose}
+          >
+            <ArrowLeft size={20} />
+          </button>
+        </header>
+
+        <div className="px-6 py-6 space-y-6">
+          
+          {/* ข้อมูลโปรไฟล์ */}
+          <div className="bg-white rounded-3xl border border-stone-200/50 overflow-hidden shadow-sm">
+            <div 
+              className="flex items-center justify-between p-5 border-b border-stone-100 hover:bg-stone-50 cursor-pointer transition-colors"
+              onClick={() => setShowVocalRangeTest(true)}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-sage-light/30 text-sage-dark flex items-center justify-center">
+                  <Mic size={20} />
+                </div>
+                <div className="font-bold text-charcoal">ช่วงเสียง</div>
+              </div>
+              <div className="flex items-center gap-2 font-bold text-clay">
+                {vt}
+                <ChevronRight size={16} className="text-taupe" />
+              </div>
+            </div>
+
+            {skillLevel && onChangeSkillLevel && (
+              <div 
+                className="flex items-center justify-between p-5 border-b border-stone-100 hover:bg-stone-50 cursor-pointer transition-colors"
+                onClick={onChangeSkillLevel}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-ochre-light/30 text-ochre-dark flex items-center justify-center">
+                    <Target size={20} />
+                  </div>
+                  <div className="font-bold text-charcoal">ระดับความสามารถ</div>
+                </div>
+                <div className="flex items-center gap-2 font-bold text-clay">
+                  {skillLevel === 'beginner' && 'เริ่มต้น'}
+                  {skillLevel === 'intermediate' && 'ปานกลาง'}
+                  {skillLevel === 'advanced' && 'ขั้นสูง'}
+                  <ChevronRight size={16} className="text-taupe" />
+                </div>
+              </div>
+            )}
+
+            <div 
+              className="flex items-center justify-between p-5 hover:bg-stone-50 cursor-pointer transition-colors"
+              onClick={cycleDailyGoal}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-clay-light/20 text-clay-dark flex items-center justify-center">
+                  <Flame size={20} />
+                </div>
+                <div className="font-bold text-charcoal">เป้าหมายรายวัน</div>
+              </div>
+              <div className="font-bold text-clay">{dailyGoal} บทฝึก</div>
+            </div>
+          </div>
+
+          {/* การชดเชยความล่าช้าเสียง */}
+          <div className="bg-white rounded-3xl border border-stone-200/50 overflow-hidden shadow-sm">
+            <div 
+              className="flex items-center justify-between p-5 hover:bg-stone-50 cursor-pointer transition-colors"
+              onClick={() => setShowLatencyDetails(!showLatencyDetails)}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-stone-100 text-charcoal flex items-center justify-center">
+                  <Sliders size={20} />
+                </div>
+                <div>
+                  <div className="font-bold text-charcoal">ชดเชยความล่าช้าเสียง</div>
+                  <div className="text-xs font-medium text-taupe mt-1">ปรับถ้ารู้สึกว่าเสียงไมค์ไม่ตรงจังหวะ</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 font-bold text-clay">
+                {latencySettings.totalCompensation}ms
+                {showLatencyDetails ? <ChevronDown size={16} className="text-taupe" /> : <ChevronRight size={16} className="text-taupe" />}
+              </div>
+            </div>
+
+            {showLatencyDetails && (
+              <div className="p-6 bg-sand-dark border-t border-stone-200/50">
+                <button
+                  onClick={() => setShowLatencyTest(true)}
+                  className="w-full py-4 bg-clay text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-md shadow-clay/20 active:scale-95 transition-all mb-6"
+                >
+                  <Zap size={20} />
+                  ทดสอบอัตโนมัติ (แนะนำ)
+                </button>
+
+                <div className="text-center text-sm font-bold text-taupe mb-4">หรือปรับด้วยตัวเอง</div>
+
+                <div className="bg-white p-4 rounded-2xl border border-stone-200/50 mb-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="font-bold text-charcoal">ปรับเพิ่มเติม</span>
+                    <span className="font-bold text-clay text-lg">
+                      {latencySettings.manualOffset > 0 ? '+' : ''}{latencySettings.manualOffset}ms
+                    </span>
+                  </div>
+                  
+                  <div className="flex gap-2 mb-4">
+                    <button onClick={() => handleLatencyAdjust(-10)} className="flex-1 py-3 bg-sand font-bold text-charcoal rounded-xl border border-stone-200/50 active:scale-95 transition-all">-10</button>
+                    <button onClick={() => handleLatencyAdjust(-1)} className="flex-1 py-3 bg-sand font-bold text-charcoal rounded-xl border border-stone-200/50 active:scale-95 transition-all">-1</button>
+                    <button onClick={() => handleLatencyAdjust(1)} className="flex-1 py-3 bg-sand font-bold text-charcoal rounded-xl border border-stone-200/50 active:scale-95 transition-all">+1</button>
+                    <button onClick={() => handleLatencyAdjust(10)} className="flex-1 py-3 bg-sand font-bold text-charcoal rounded-xl border border-stone-200/50 active:scale-95 transition-all">+10</button>
+                  </div>
+
+                  <button
+                    onClick={handleLatencyReset}
+                    className="w-full py-3 bg-stone-100 font-bold text-charcoal rounded-xl flex items-center justify-center gap-2 hover:bg-stone-200 transition-colors"
+                  >
+                    <RotateCcw size={16} />
+                    รีเซ็ตเป็นค่าเริ่มต้น
+                  </button>
+                </div>
+
+                <div className="p-4 bg-sage-light/20 rounded-2xl border border-sage-light/30">
+                  <div className="text-xs font-medium text-charcoal/80 leading-relaxed">
+                    <strong className="text-sage-dark block mb-1">วิธีใช้:</strong>
+                    • ถ้ารู้สึกว่าเส้นเสียงของคุณวาด <strong className="text-charcoal">"ช้ากว่า"</strong> ให้เพิ่มค่า (+)<br/>
+                    • ถ้ารู้สึกว่าเส้นเสียงของคุณวาด <strong className="text-charcoal">"เร็วกว่า"</strong> ให้ลดค่า (-)<br/>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* อันตราย */}
+          <div className="bg-white rounded-3xl border border-rose-100 overflow-hidden shadow-sm">
+            <div 
+              className="flex items-center gap-4 p-5 hover:bg-rose-50 cursor-pointer transition-colors"
+              onClick={() => setShowResetConfirm(true)}
+            >
+              <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center">
+                <Trash2 size={20} />
+              </div>
+              <div className="font-bold text-rose-500">ล้างข้อมูลและรีเซ็ตแอปทั้งหมด</div>
+            </div>
+          </div>
+          
+        </div>
       </div>
-    </div>
     </>
   );
 }

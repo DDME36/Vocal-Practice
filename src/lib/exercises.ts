@@ -75,6 +75,28 @@ const vowelShift = (r: number, _bpm: number, _syl: string) => {
 const sustainedHold = (r: number, _bpm: number, syl: string, dur: number) => generatePattern(r, [[0,dur]], 3, 1, syl, 4);
 const diaphragmBounce = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25],[0,0.25]], 4, 1, syl, 1);
 
+const agilityRun = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,0.25],[4,0.25],[7,0.25],[12,0.25],[16,0.5],[12,0.25],[7,0.25],[4,0.25],[0,1.5]], 4, 1, syl, 1.5);
+const chromaticRun = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,0.5],[1,0.5],[2,0.5],[3,0.5],[4,0.5],[3,0.5],[2,0.5],[1,0.5],[0,1.5]], 4, 1, syl, 2);
+const diminishedArp = (r: number, _bpm: number, syl: string) => generatePattern(r, [[0,0.75],[3,0.75],[6,0.75],[9,0.75],[12,1.5],[9,0.75],[6,0.75],[3,0.75],[0,2]], 4, 1, syl, 2);
+const lakatakaRun = (r: number, _bpm: number, _syl: string) => {
+  const notes: ExerciseNote[] = [];
+  let beat = 0;
+  const syllables = ['La', 'Ka', 'Ta', 'Ka', 'La', 'Ka', 'Ta', 'Ka'];
+  for (let rep = 0; rep < 4; rep++) {
+    const root = r + rep;
+    [0, 4, 7].forEach(interval => {
+      notes.push({ midi: root + interval, startBeat: beat, durationBeats: 0.5, syllable: '', isChord: true });
+    });
+    beat += 0.6;
+    syllables.forEach((s) => {
+      notes.push({ midi: root, startBeat: beat, durationBeats: 0.25, syllable: s });
+      beat += 0.25;
+    });
+    beat += 1.5;
+  }
+  return notes;
+};
+
 const randomSyllable = (syllables: string[]) => syllables[Math.floor(Math.random() * syllables.length)];
 
 export const EXERCISES: Exercise[] = [
@@ -125,5 +147,12 @@ export const EXERCISES: Exercise[] = [
   { id: 're-mixed', name: 'Mixed Voice Access', category: 'RANGE EXPANSION', icon: '', goal: 'ผสมเสียงช่วงเชื่อมต่อ (Passaggio)', instructions: 'ร้องแบบเสียงขึ้นจมูกไต่อันดับ (สุ่มพยางค์ทุกครั้ง)', bpm: 100, startingNote: 53, notes: swiftBuildUp(53, 100, randomSyllable(['Nay', 'Nee', 'Nah', 'Nya'])), difficulty: 'advanced', breathingTip: 'ปล่อยเสียงขึ้นจมูกเบาๆ อย่าบีบคอ' },
   
   // BELTING
-  { id: 'belt-power', name: 'Power Belting', category: 'BELTING', icon: '', goal: 'สร้างพลังเสียงเต็มเสียง', instructions: 'ตะโกนแข็งแรง ทรงพลัง (สุ่มพยางค์ทุกครั้ง)', bpm: 100, startingNote: 52, notes: generatePattern(52, [[0,2]], 5, 1, randomSyllable(['Yeah', 'Hey', 'Woah', 'Hah']), 2), difficulty: 'advanced', breathingTip: 'ใช้กะบังลมดันเต็มที่ อย่าบีบคอ' }
+  { id: 'belt-power', name: 'Power Belting', category: 'BELTING', icon: '', goal: 'สร้างพลังเสียงเต็มเสียง', instructions: 'ตะโกนแข็งแรง ทรงพลัง (สุ่มพยางค์ทุกครั้ง)', bpm: 100, startingNote: 52, notes: generatePattern(52, [[0,2]], 5, 1, randomSyllable(['Yeah', 'Hey', 'Woah', 'Hah']), 2), difficulty: 'advanced', breathingTip: 'ใช้กะบังลมดันเต็มที่ อย่าบีบคอ' },
+
+  // NEW EXERCISES
+  { id: 'run-agility-int', name: 'Agility Master', category: 'RUNS', icon: '', goal: 'ฝึกความรวดเร็วและความคล่องตัวของเส้นเสียง', instructions: 'ร้องสเกลไล่ระดับอย่างรวดเร็วทีละโน้ตสลับขึ้นลง (สุ่มพยางค์ทุกครั้ง)', bpm: 110, startingNote: 48, notes: agilityRun(48, 110, randomSyllable(['Mee', 'Yah', 'Wee', 'Zah'])), difficulty: 'intermediate', breathingTip: 'ปล่อยลมสม่ำเสมอพยุงความเร็วของโน้ต' },
+  { id: 'sc-chromatic-adv', name: 'Chromatic Ascent', category: 'SCALES', icon: '', goal: 'ฝึกความแม่นยำในการเปลี่ยนคีย์ทีละครึ่งเสียง', instructions: 'ร้องไต่คีย์สูงขึ้นทีละเซมิโทน (ครึ่งเสียง) อย่างละเอียด (สุ่มพยางค์ทุกครั้ง)', bpm: 90, startingNote: 48, notes: chromaticRun(48, 90, randomSyllable(['Mmm', 'Ah', 'Oh', 'Ee'])), difficulty: 'advanced', breathingTip: 'เปิดช่องคอให้ผ่อนคลายและคงที่เพื่อล็อกครึ่งเสียง' },
+  { id: 'arp-diminished', name: 'Diminished Chord Dive', category: 'ARPEGGIOS', icon: '', goal: 'ฝึกจับคู่ระดับเสียงในโครงสร้างคอร์ดไมเนอร์เทิร์ด', instructions: 'ร้องกระโดดโน้ตแบบคอร์ดดิมินิชเพื่อฝึกหูและเส้นเสียง (สุ่มพยางค์ทุกครั้ง)', bpm: 95, startingNote: 48, notes: diminishedArp(48, 95, randomSyllable(['Zah', 'Vee', 'Koh', 'Loo'])), difficulty: 'advanced', breathingTip: 'เพ่งสมาธิถึงความห่างของโน้ตก่อนร้องออกมา' },
+  { id: 'br-crescendo', name: 'Sustained Pulse', category: 'BREATHING', icon: '', goal: 'ฝึกควบคุมระดับความดังเบาของลมหายใจขณะลากเสียง', instructions: 'ลากเสียงโน้ตแช่ยาวพร้อมค่อยๆ เพิ่มและลดความดังสลับกัน (สุ่มพยางค์ทุกครั้ง)', bpm: 80, startingNote: 50, notes: sustainedHold(50, 80, randomSyllable(['Ah', 'Ee', 'Oh', 'Ooh']), 12), difficulty: 'intermediate', breathingTip: 'ควบคุมหน้าท้องให้ผ่อนลมออกนิ่งสนิทตามช่วงกว้าง' },
+  { id: 'art-twister', name: 'Speed Articulation', category: 'ARTICULATION', icon: '', goal: 'ฝึกการขยับริมฝีปากและเพดานอ่อนอย่างแม่นยำและรวดเร็ว', instructions: 'ร้องพยางค์รัวๆ ตามจังหวะตัวโน้ตอย่างกระชับรวดเร็ว', bpm: 100, startingNote: 48, notes: lakatakaRun(48, 100, ''), difficulty: 'intermediate', breathingTip: 'ใช้แรงจากกะบังลมดันเสียงช่วย ไม่เกร็งกล้ามเนื้อคอ' }
 ];
